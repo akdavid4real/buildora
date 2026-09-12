@@ -6,39 +6,24 @@ import { publicApi } from '../lib/api-client';
 import { DemoStore, INITIAL_DEMO_STATE } from '../lib/demo-store';
 import type { DemoStoreState, PostItem } from '../lib/types';
 
-function extractContentHtml(item?: {
-  content?: string;
-  contentJson?: Record<string, unknown> | null;
-}): string {
+function extractContentHtml(item?: { content?: string; contentJson?: Record<string, unknown> | null }): string {
   if (!item) return '';
-  if (typeof item.content === 'string' && item.content.trim().length > 0) {
-    return item.content;
-  }
+  if (typeof item.content === 'string' && item.content.trim().length > 0) return item.content;
   if (item.contentJson && typeof item.contentJson === 'object') {
     const doc = item.contentJson as {
       type?: string;
-      content?: Array<{
-        type?: string;
-        content?: Array<{ text?: string }>;
-        text?: string;
-      }>;
+      content?: Array<{ type?: string; attrs?: { level?: number }; content?: Array<{ text?: string }>; text?: string }>;
     };
     if (Array.isArray(doc.content)) {
       return doc.content
         .map((n) => {
-          if (n.type === 'heading') {
-            const text = (n.content || []).map((c) => c.text || '').join('');
-            return `<h2>${text}</h2>`;
-          }
-          if (n.type === 'paragraph') {
-            const text = (n.content || []).map((c) => c.text || '').join('');
-            return text ? `<p>${text}</p>` : '';
-          }
-          if (n.type === 'blockquote') {
-            const text = (n.content || []).map((c) => c.text || '').join('');
-            return `<blockquote>${text}</blockquote>`;
-          }
           const text = n.text || (n.content || []).map((c) => c.text || '').join('');
+          if (n.type === 'heading') {
+            const level = n.attrs?.level === 1 ? 'h1' : n.attrs?.level === 3 ? 'h3' : 'h2';
+            return `<${level}>${text}</${level}>`;
+          }
+          if (n.type === 'paragraph') return text ? `<p>${text}</p>` : '';
+          if (n.type === 'blockquote') return `<blockquote>${text}</blockquote>`;
           return text ? `<p>${text}</p>` : '';
         })
         .filter(Boolean)
@@ -54,7 +39,6 @@ export function PublicSite({ slug, path }: { slug: string; path: string[] }) {
 
   useEffect(() => {
     let active = true;
-
     const loadSite = async () => {
       if (slug === 'my-site' || slug === 'demo') {
         if (active) {
@@ -66,7 +50,6 @@ export function PublicSite({ slug, path }: { slug: string; path: string[] }) {
 
       try {
         const publicSite = await publicApi.getSiteBySlug(slug);
-
         if (active && publicSite) {
           const mappedState: DemoStoreState = {
             version: 1,
@@ -75,21 +58,10 @@ export function PublicSite({ slug, path }: { slug: string; path: string[] }) {
               siteSlug: publicSite.slug,
               tagline: String((publicSite.themeConfig as Record<string, unknown>)?.tagline || ''),
               themeId: (publicSite.themeId as DemoStoreState['site']['themeId']) || 'minimal-blog',
-              accentColor:
-                String((publicSite.themeConfig as Record<string, unknown>)?.accentColor || '') ||
-                '#174d3e',
-              customDomain:
-                typeof (publicSite.themeConfig as Record<string, unknown>)?.customDomain === 'string'
-                  ? ((publicSite.themeConfig as Record<string, unknown>).customDomain as string)
-                  : undefined,
-              seoTitle:
-                typeof (publicSite.themeConfig as Record<string, unknown>)?.seoTitle === 'string'
-                  ? ((publicSite.themeConfig as Record<string, unknown>).seoTitle as string)
-                  : undefined,
-              seoDescription:
-                typeof (publicSite.themeConfig as Record<string, unknown>)?.seoDescription === 'string'
-                  ? ((publicSite.themeConfig as Record<string, unknown>).seoDescription as string)
-                  : undefined,
+              accentColor: String((publicSite.themeConfig as Record<string, unknown>)?.accentColor || '') || '#174d3e',
+              customDomain: typeof (publicSite.themeConfig as Record<string, unknown>)?.customDomain === 'string' ? ((publicSite.themeConfig as Record<string, unknown>).customDomain as string) : undefined,
+              seoTitle: typeof (publicSite.themeConfig as Record<string, unknown>)?.seoTitle === 'string' ? ((publicSite.themeConfig as Record<string, unknown>).seoTitle as string) : undefined,
+              seoDescription: typeof (publicSite.themeConfig as Record<string, unknown>)?.seoDescription === 'string' ? ((publicSite.themeConfig as Record<string, unknown>).seoDescription as string) : undefined,
             },
             pages: publicSite.pages.map((p) => ({
               id: p.id,
@@ -101,8 +73,7 @@ export function PublicSite({ slug, path }: { slug: string; path: string[] }) {
               contentJson: p.contentJson,
               seoTitle: p.seoTitle ?? undefined,
               seoDescription: p.seoDescription ?? undefined,
-              updatedAt:
-                typeof p.updatedAt === 'string' ? p.updatedAt : new Date(p.updatedAt).toISOString(),
+              updatedAt: typeof p.updatedAt === 'string' ? p.updatedAt : new Date(p.updatedAt).toISOString(),
             })),
             posts: publicSite.posts.map((p) => ({
               id: p.id,
@@ -117,26 +88,20 @@ export function PublicSite({ slug, path }: { slug: string; path: string[] }) {
               tags: [],
               seoTitle: p.seoTitle ?? undefined,
               seoDescription: p.seoDescription ?? undefined,
-              publishedAt: p.publishedAt
-                ? typeof p.publishedAt === 'string'
-                  ? p.publishedAt
-                  : new Date(p.publishedAt).toISOString()
-                : null,
-              updatedAt:
-                typeof p.updatedAt === 'string' ? p.updatedAt : new Date(p.updatedAt).toISOString(),
+              publishedAt: p.publishedAt ? (typeof p.publishedAt === 'string' ? p.publishedAt : new Date(p.publishedAt).toISOString()) : null,
+              updatedAt: typeof p.updatedAt === 'string' ? p.updatedAt : new Date(p.updatedAt).toISOString(),
             })),
             media: [],
             selectedPageId: publicSite.pages[0]?.id || '',
             selectedPostId: publicSite.posts[0]?.id || null,
             activeNav: 'overview',
           };
-
           setState(mappedState);
           setReady(true);
           return;
         }
       } catch {
-        // Fall back gracefully to DemoStore on network/API failure or 404
+        // Fall back gracefully to the browser demo.
       }
 
       if (active) {
@@ -146,7 +111,6 @@ export function PublicSite({ slug, path }: { slug: string; path: string[] }) {
     };
 
     loadSite();
-
     return () => {
       active = false;
     };
@@ -173,8 +137,7 @@ export function PublicSite({ slug, path }: { slug: string; path: string[] }) {
 
     if (typeof document !== 'undefined') {
       document.title = title;
-      const description =
-        activeItem?.seoDescription || state.site.seoDescription || state.site.tagline;
+      const description = activeItem?.seoDescription || state.site.seoDescription || state.site.tagline;
       if (description) {
         let metaDesc = document.querySelector('meta[name="description"]');
         if (!metaDesc) {
@@ -189,18 +152,10 @@ export function PublicSite({ slug, path }: { slug: string; path: string[] }) {
 
   if (!ready) return null;
 
-  const themeClass =
-    state.site.themeId === 'small-business'
-      ? 'business'
-      : state.site.themeId === 'personal-portfolio'
-        ? 'portfolio'
-        : '';
+  const themeClass = state.site.themeId === 'minimal-blog' ? '' : state.site.themeId;
 
   return (
-    <div
-      className={`public ${themeClass}`}
-      style={{ '--green': state.site.accentColor } as React.CSSProperties}
-    >
+    <div className={`public ${themeClass}`} style={{ '--green': state.site.accentColor } as React.CSSProperties}>
       <header className="public-header">
         <Link href={root} className="brand">
           <span className="brand-mark">B</span>
@@ -208,14 +163,10 @@ export function PublicSite({ slug, path }: { slug: string; path: string[] }) {
         </Link>
         <nav className="desktop-only">
           {state.pages
-            .filter(
-              (item) => item.status === 'PUBLISHED' && !item.isHomepage && item.slug !== 'blog',
-            )
+            .filter((item) => item.status === 'PUBLISHED' && !item.isHomepage && item.slug !== 'blog')
             .slice(0, 4)
             .map((item) => (
-              <Link key={item.id} href={`${root}/${item.slug}`}>
-                {item.title}
-              </Link>
+              <Link key={item.id} href={`${root}/${item.slug}`}>{item.title}</Link>
             ))}
           <Link href={`${root}/blog`}>Blog</Link>
         </nav>
@@ -260,9 +211,7 @@ function NotFound({ root }: { root: string }) {
     <div className="empty">
       <h1>That page isn’t published yet.</h1>
       <p>Head back to the homepage or publish it from the Buildora dashboard.</p>
-      <Link className="btn btn-primary" href={root}>
-        Go home
-      </Link>
+      <Link className="btn btn-primary" href={root}>Go home</Link>
     </div>
   );
 }
