@@ -4,6 +4,7 @@ import { ArrowLeft, Eye, Save } from 'lucide-react';
 import Link from 'next/link';
 import { useDemo } from '../lib/demo-context';
 import type { PageItem } from '../lib/types';
+import { ReusableSections } from './reusable-sections';
 import { SectionBuilder } from './section-builder';
 
 export function PageSectionBuilderView({ id }: { id: string }) {
@@ -40,6 +41,11 @@ export function PageSectionBuilderView({ id }: { id: string }) {
     ? `/site/${state.site.siteSlug}`
     : `/site/${state.site.siteSlug}${page.slug ? `/${page.slug}` : ''}`;
 
+  const getNodes = () => [...(editorLike.getJSON().content ?? [])];
+  const insertReusable = (nodes: Array<Record<string, unknown>>) => {
+    editorLike.commands.setContent({ type: 'doc', content: [...getNodes(), ...nodes] });
+  };
+
   return (
     <div className="content">
       <div className="hero-row">
@@ -49,7 +55,7 @@ export function PageSectionBuilderView({ id }: { id: string }) {
           </Link>
           <span className="eyebrow" style={{ display: 'block', marginTop: 12 }}>Visual builder</span>
           <h2 style={{ marginBottom: 6 }}>{page.title}</h2>
-          <p>Add ready-made blocks and drag content into the order you want.</p>
+          <p>Add ready-made blocks, reuse saved layouts and drag content into the order you want.</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <a href={publicUrl} target="_blank" rel="noopener noreferrer" className="btn btn-secondary">
@@ -65,7 +71,10 @@ export function PageSectionBuilderView({ id }: { id: string }) {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 380px) minmax(0, 1fr)', gap: 20, alignItems: 'start' }}>
-        <SectionBuilder editor={editorLike} />
+        <div>
+          <SectionBuilder editor={editorLike} />
+          <ReusableSections getNodes={getNodes} onInsert={insertReusable} />
+        </div>
         <div className="card" style={{ padding: 0, overflow: 'hidden', minHeight: 660 }}>
           <div style={{ padding: '12px 16px', borderBottom: '1px solid #e5ebe8', fontSize: 12, fontWeight: 800, color: '#53615c' }}>
             LIVE PAGE PREVIEW
