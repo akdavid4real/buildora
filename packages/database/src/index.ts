@@ -1,3 +1,4 @@
+import { createClient } from '@libsql/client';
 import { PrismaLibSQL } from '@prisma/adapter-libsql';
 import { PrismaClient } from '@prisma/client';
 
@@ -11,10 +12,12 @@ function createPrismaClient() {
     throw new Error('TURSO_DATABASE_URL is required');
   }
 
-  const adapter = new PrismaLibSQL({
+  const libsql = createClient({
     url,
     authToken,
   });
+
+  const adapter = new PrismaLibSQL(libsql);
 
   return new PrismaClient({
     adapter,
