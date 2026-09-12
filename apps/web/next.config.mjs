@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  transpilePackages: ['@buildora/contracts'],
+  transpilePackages: ['@buildora/contracts', '@buildora/database'],
   images: {
     remotePatterns: [
       {
