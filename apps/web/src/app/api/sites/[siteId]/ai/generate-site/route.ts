@@ -2,16 +2,23 @@ import { prisma } from '@buildora/database';
 import { assertOwnedSite, getHackathonUser, jsonError } from '../../../../../../../server/hackathon';
 
 const MODEL = process.env.MISTRAL_MODEL || 'mistral-small-latest';
+const THEME_IDS = [
+  'minimal-blog',
+  'small-business',
+  'personal-portfolio',
+  'agency',
+  'restaurant',
+  'saas',
+  'event',
+  'personal-brand',
+] as const;
 
 function tiptap(title: string, paragraphs: string[]) {
   return {
     type: 'doc',
     content: [
       { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: title }] },
-      ...paragraphs.map((text) => ({
-        type: 'paragraph',
-        content: [{ type: 'text', text }],
-      })),
+      ...paragraphs.map((text) => ({ type: 'paragraph', content: [{ type: 'text', text }] })),
     ],
   };
 }
@@ -29,9 +36,7 @@ export async function POST(request: Request, { params }: { params: { siteId: str
     const user = await getHackathonUser();
     const body = (await request.json()) as { description?: string };
     const description = body.description?.trim();
-    if (!description || description.length < 10) {
-      return jsonError('Describe the business or website in at least 10 characters.');
-    }
+    if (!description || description.length < 10) return jsonError('Describe the business or website in at least 10 characters.');
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 25_000);
@@ -39,10 +44,7 @@ export async function POST(request: Request, { params }: { params: { siteId: str
 
     const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
         model: MODEL,
         temperature: 0.65,
@@ -51,7 +53,7 @@ export async function POST(request: Request, { params }: { params: { siteId: str
           {
             role: 'system',
             content:
-              'You are Buildora, an expert website strategist. Return ONLY valid JSON with no markdown. Create concise, polished website copy. Theme must be one of minimal-blog, small-business, personal-portfolio.',
+              `You are Buildora, an expert website strategist. Return ONLY valid JSON with no markdown. Create concise, polished website copy. Theme must be one of ${THEME_IDS.join(', ')}. Pick the theme that best matches the business and audience.`,
           },
           {
             role: 'user',
@@ -79,12 +81,8 @@ export async function POST(request: Request, { params }: { params: { siteId: str
       return jsonError('AI returned invalid website data. Try again.', 502);
     }
 
-    const themeId = ['minimal-blog', 'small-business', 'personal-portfolio'].includes(generated.themeId)
-      ? generated.themeId
-      : 'small-business';
-    const accentColor = /^#[0-9a-f]{6}$/i.test(generated.accentColor || '')
-      ? generated.accentColor
-      : '#174d3e';
+    const themeId = (THEME_IDS as readonly string[]).includes(generated.themeId) ? generated.themeId : 'small-business';
+    const accentColor = /^#[0-9a-f]{6}$/i.test(generated.accentColor || '') ? generated.accentColor : '#174d3e';
 
     const site = await prisma.site.update({
       where: { id: params.siteId },
@@ -107,10 +105,7 @@ export async function POST(request: Request, { params }: { params: { siteId: str
     const servicesBody = Array.isArray(generated.services?.body) ? generated.services.body : [];
 
     await prisma.$transaction(async (tx) => {
-      await tx.page.updateMany({
-        where: { siteId: params.siteId, isHomepage: true },
-        data: { isHomepage: false },
-      });
+      await tx.page.updateMany({ where: { siteId: params.siteId, isHomepage: true }, data: { isHomepage: false } });
 
       const pages = [
         {
@@ -122,39 +117,15 @@ export async function POST(request: Request, { params }: { params: { siteId: str
             generated.home?.cta ? `Next step: ${generated.home.cta}` : '',
           ].filter(Boolean)),
         },
-        {
-          slug: 'about',
-          title: generated.about?.title || 'About',
-          isHomepage: false,
-          contentJson: tiptap(generated.about?.title || 'About', aboutBody),
-        },
-        {
-          slug: 'services',
-          title: generated.services?.title || 'Services',
-          isHomepage: false,
-          contentJson: tiptap(generated.services?.title || 'Services', servicesBody),
-        },
+        { slug: 'about', title: generated.about?.title || 'About', isHomepage: false, contentJson: tiptap(generated.about?.title || 'About', aboutBody) },
+        { slug: 'services', title: generated.services?.title || 'Services', isHomepage: false, contentJson: tiptap(generated.services?.title || 'Services', servicesBody) },
       ];
 
       for (const page of pages) {
         await tx.page.upsert({
           where: { siteId_slug: { siteId: params.siteId, slug: page.slug } },
-          update: {
-            title: page.title,
-            contentJson: page.contentJson,
-            isHomepage: page.isHomepage,
-            status: 'PUBLISHED',
-            publishedAt: new Date(),
-          },
-          create: {
-            siteId: params.siteId,
-            slug: page.slug,
-            title: page.title,
-            contentJson: page.contentJson,
-            isHomepage: page.isHomepage,
-            status: 'PUBLISHED',
-            publishedAt: new Date(),
-          },
+          update: { title: page.title, contentJson: page.contentJson, isHomepage: page.isHomepage, status: 'PUBLISHED', publishedAt: new Date() },
+          create: { siteId: params.siteId, slug: page.slug, title: page.title, contentJson: page.contentJson, isHomepage: page.isHomepage, status: 'PUBLISHED', publishedAt: new Date() },
         });
       }
     });
@@ -189,9 +160,7 @@ export async function POST(request: Request, { params }: { params: { siteId: str
       },
     });
   } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      return jsonError('AI website generation timed out', 504);
-    }
+    if (error instanceof Error && error.name === 'AbortError') return jsonError('AI website generation timed out', 504);
     console.error('AI site generation failed', error);
     return jsonError('Unable to generate website', 500);
   }
