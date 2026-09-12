@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, Eye, Save } from 'lucide-react';
+import { ArrowLeft, Eye, FormInput, Save } from 'lucide-react';
 import Link from 'next/link';
 import { useDemo } from '../lib/demo-context';
 import type { PageItem } from '../lib/types';
@@ -56,9 +56,12 @@ export function PageSectionBuilderView({ id }: { id: string }) {
           </Link>
           <span className="eyebrow" style={{ display: 'block', marginTop: 12 }}>Visual builder</span>
           <h2 style={{ marginBottom: 6 }}>{page.title}</h2>
-          <p>Add ready-made blocks, reuse saved layouts, save versions and drag content into the order you want.</p>
+          <p>Add ready-made blocks, reuse saved layouts, connect forms, save versions and drag content into the order you want.</p>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <Link href="/dashboard/forms" className="btn btn-secondary" style={{ textDecoration: 'none' }}>
+            <FormInput size={15} /> Connect form
+          </Link>
           <a href={publicUrl} target="_blank" rel="noopener noreferrer" className="btn btn-secondary">
             <Eye size={15} /> Preview
           </a>
