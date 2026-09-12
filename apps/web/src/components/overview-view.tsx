@@ -5,6 +5,7 @@ import {
   FileText,
   Globe2,
   Image as ImageIcon,
+  LayoutTemplate,
   Palette,
   Plus,
   Sparkles,
@@ -18,6 +19,7 @@ import { useDemo } from '../lib/demo-context';
 export function OverviewView() {
   const { state, createPage, isApiMode } = useDemo();
   const router = useRouter();
+  const firstPage = state.pages[0];
 
   const published =
     state.pages.filter((p) => p.status === 'PUBLISHED').length +
@@ -49,8 +51,17 @@ export function OverviewView() {
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <Link href="/onboarding" className="btn btn-secondary" style={{ textDecoration: 'none' }}>
-            <WandSparkles size={16} /> Set up site
+            <WandSparkles size={16} /> AI site builder
           </Link>
+          {firstPage && (
+            <Link
+              href={`/dashboard/pages/${firstPage.id}/sections`}
+              className="btn btn-secondary"
+              style={{ textDecoration: 'none' }}
+            >
+              <LayoutTemplate size={16} /> Visual builder
+            </Link>
+          )}
           <button className="btn btn-primary" onClick={handleCreateContent}>
             <Plus size={16} /> Create content
           </button>
