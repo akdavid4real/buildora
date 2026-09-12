@@ -1,6 +1,6 @@
 'use client';
 
-import { Copy, ExternalLink, Plus, RefreshCw } from 'lucide-react';
+import { Copy, Download, ExternalLink, Plus, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 import { useDemo } from '../lib/demo-context';
 
@@ -13,6 +13,7 @@ export function SitesView() {
   const [switching, setSwitching] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [duplicating, setDuplicating] = useState<string | null>(null);
+  const [exporting, setExporting] = useState<string | null>(null);
 
   const switchSite = async (site: (typeof sites)[number]) => {
     setSwitching(site.id);
@@ -70,13 +71,33 @@ export function SitesView() {
     }
   };
 
+  const exportSite = async (site: (typeof sites)[number]) => {
+    setExporting(site.id);
+    try {
+      const response = await fetch(`/api/sites/${site.id}/export`);
+      if (!response.ok) throw new Error('Unable to export site');
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `${site.slug}-buildora.json`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+      showNotice('Site export downloaded');
+    } catch (error) {
+      showNotice(error instanceof Error ? error.message : 'Unable to export site');
+    } finally {
+      setExporting(null);
+    }
+  };
+
   return (
     <div className="content">
       <div className="hero-row">
         <div>
           <span className="eyebrow">Workspaces</span>
           <h2>Your websites</h2>
-          <p>Create, clone, switch between, and open multiple Buildora sites.</p>
+          <p>Create, clone, export, switch between, and open multiple Buildora sites.</p>
         </div>
         <button className="btn btn-primary" onClick={createBlank} disabled={creating}>
           <Plus size={15} /> {creating ? 'Creating…' : 'New website'}
@@ -104,6 +125,9 @@ export function SitesView() {
                 )}
                 <button className="btn btn-secondary" onClick={() => duplicate(site)} disabled={duplicating === site.id}>
                   <Copy size={14} /> {duplicating === site.id ? 'Cloning…' : 'Clone'}
+                </button>
+                <button className="btn btn-secondary" onClick={() => exportSite(site)} disabled={exporting === site.id}>
+                  <Download size={14} /> {exporting === site.id ? 'Exporting…' : 'Export'}
                 </button>
                 <a className="btn btn-secondary" href={`/site/${site.slug}`} target="_blank" rel="noopener noreferrer">
                   <ExternalLink size={14} /> Open
