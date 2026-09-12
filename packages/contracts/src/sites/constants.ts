@@ -24,6 +24,15 @@ export const RESERVED_SITE_SLUGS = [
 
 export type ReservedSiteSlug = (typeof RESERVED_SITE_SLUGS)[number];
 
-export const THEME_IDS = ['minimal-blog', 'small-business', 'personal-portfolio'] as const;
+export const THEME_IDS = [
+  'minimal-blog',
+  'small-business',
+  'personal-portfolio',
+  'agency',
+  'restaurant',
+  'saas',
+  'event',
+  'personal-brand',
+] as const;
 
 export type ThemeId = (typeof THEME_IDS)[number];

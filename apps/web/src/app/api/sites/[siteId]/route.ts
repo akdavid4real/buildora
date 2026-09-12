@@ -17,9 +17,19 @@ export async function PATCH(request: Request, { params }: { params: { siteId: st
     const parsed = updateSiteSchema.safeParse(await request.json());
     if (!parsed.success) return jsonError(parsed.error.issues[0]?.message ?? 'Invalid site data');
 
+    const currentConfig = site.themeConfig && typeof site.themeConfig === 'object'
+      ? (site.themeConfig as Record<string, unknown>)
+      : {};
+    const incomingConfig = parsed.data.themeConfig && typeof parsed.data.themeConfig === 'object'
+      ? (parsed.data.themeConfig as Record<string, unknown>)
+      : undefined;
+
     const updated = await prisma.site.update({
       where: { id: site.id },
-      data: parsed.data,
+      data: {
+        ...parsed.data,
+        ...(incomingConfig ? { themeConfig: { ...currentConfig, ...incomingConfig } } : {}),
+      },
     });
     return Response.json(updated);
   } catch {
