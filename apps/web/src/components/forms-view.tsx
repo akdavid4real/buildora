@@ -1,6 +1,6 @@
 'use client';
 
-import { Inbox, Plus, Trash2 } from 'lucide-react';
+import { Download, ExternalLink, Inbox, Plus, Power, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useDemo } from '../lib/demo-context';
 
@@ -21,7 +21,7 @@ type Submission = {
 };
 
 export function FormsView() {
-  const { currentSite, showNotice } = useDemo();
+  const { currentSite, state, showNotice } = useDemo();
   const [forms, setForms] = useState<SiteForm[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [type, setType] = useState<SiteForm['type']>('contact');
@@ -53,7 +53,7 @@ export function FormsView() {
       const payload = await response.json().catch(() => null);
       if (!response.ok) throw new Error(payload?.message || 'Unable to create form');
       await load();
-      showNotice('Form created');
+      showNotice('Form created and landing page published');
     } catch (error) {
       showNotice(error instanceof Error ? error.message : 'Unable to create form');
     } finally {
@@ -61,11 +61,50 @@ export function FormsView() {
     }
   };
 
+  const patchForm = async (form: SiteForm, patch: Partial<SiteForm>) => {
+    if (!currentSite) return;
+    const next = { ...form, ...patch };
+    setForms((items) => items.map((item) => item.id === form.id ? next : item));
+    const response = await fetch(`/api/sites/${currentSite.id}/forms`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: form.id, ...patch }),
+    });
+    if (!response.ok) {
+      await load();
+      showNotice('Unable to update form');
+    } else {
+      showNotice(next.enabled ? 'Form is live' : 'Form paused');
+    }
+  };
+
   const removeForm = async (id: string) => {
     if (!currentSite) return;
-    await fetch(`/api/sites/${currentSite.id}/forms?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    const response = await fetch(`/api/sites/${currentSite.id}/forms?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    if (!response.ok) {
+      showNotice('Unable to remove form');
+      return;
+    }
     setForms((items) => items.filter((item) => item.id !== id));
     showNotice('Form removed');
+  };
+
+  const exportCsv = () => {
+    const rows = submissions.map((submission) => ({
+      type: submission.formType,
+      createdAt: submission.createdAt,
+      ...submission.payload,
+    }));
+    const headers = Array.from(new Set(rows.flatMap((row) => Object.keys(row))));
+    const escape = (value: unknown) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+    const csv = [headers.map(escape).join(','), ...rows.map((row) => headers.map((header) => escape((row as Record<string, unknown>)[header])).join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `buildora-submissions-${new Date().toISOString().slice(0, 10)}.csv`;
+    anchor.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -90,19 +129,24 @@ export function FormsView() {
 
       <div className="grid-2">
         <section className="card">
-          <h3>Active forms</h3>
+          <h3>Forms</h3>
           {forms.length === 0 ? (
-            <div className="empty" style={{ padding: 30 }}>No forms yet.</div>
+            <div className="empty" style={{ padding: 30 }}>No forms yet. Create one above and Buildora will publish its landing page automatically.</div>
           ) : (
             <div className="activity">
               {forms.map((form) => (
-                <div className="activity-row" key={form.id}>
-                  <div>
+                <div className="activity-row" key={form.id} style={{ alignItems: 'flex-start' }}>
+                  <div style={{ minWidth: 0 }}>
                     <strong>{form.title}</strong>
                     <small>/{form.pageSlug} · {form.type}</small>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span className="badge">{form.enabled ? 'Live' : 'Off'}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                    <a className="btn btn-secondary" style={{ padding: '6px 8px' }} href={`/site/${state.site.siteSlug}/${form.pageSlug}`} target="_blank" rel="noopener noreferrer" title="Open live form">
+                      <ExternalLink size={13} />
+                    </a>
+                    <button className={form.enabled ? 'btn btn-soft' : 'btn btn-secondary'} style={{ padding: '6px 9px', fontSize: 12 }} onClick={() => patchForm(form, { enabled: !form.enabled })}>
+                      <Power size={13} /> {form.enabled ? 'Live' : 'Paused'}
+                    </button>
                     <button className="btn btn-danger" style={{ padding: '6px 8px' }} onClick={() => removeForm(form.id)}>
                       <Trash2 size={13} />
                     </button>
@@ -114,9 +158,16 @@ export function FormsView() {
         </section>
 
         <section className="card">
-          <div className="panel-title"><Inbox size={16} /> Recent submissions</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center', marginBottom: 12 }}>
+            <div className="panel-title" style={{ margin: 0 }}><Inbox size={16} /> Recent submissions</div>
+            {submissions.length > 0 && (
+              <button className="btn btn-secondary" style={{ padding: '6px 9px', fontSize: 12 }} onClick={exportCsv}>
+                <Download size={13} /> Export CSV
+              </button>
+            )}
+          </div>
           {submissions.length === 0 ? (
-            <div className="empty" style={{ padding: 30 }}>No responses yet.</div>
+            <div className="empty" style={{ padding: 30 }}>No responses yet. Open a live form and submit a test response.</div>
           ) : (
             <div className="activity">
               {submissions.map((submission) => (
@@ -124,8 +175,8 @@ export function FormsView() {
                   <div style={{ minWidth: 0 }}>
                     <strong style={{ textTransform: 'capitalize' }}>{submission.formType}</strong>
                     <small>{new Date(submission.createdAt).toLocaleString()}</small>
-                    <div style={{ marginTop: 7, fontSize: 12, color: '#526960' }}>
-                      {Object.entries(submission.payload).slice(0, 4).map(([key, value]) => (
+                    <div style={{ marginTop: 7, fontSize: 12, color: '#526960', wordBreak: 'break-word' }}>
+                      {Object.entries(submission.payload).slice(0, 6).map(([key, value]) => (
                         <div key={key}><b>{key}:</b> {value}</div>
                       ))}
                     </div>
