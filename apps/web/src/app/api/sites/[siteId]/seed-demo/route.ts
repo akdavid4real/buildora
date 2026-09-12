@@ -25,14 +25,14 @@ export async function POST(_: Request, { params }: { params: { siteId: string } 
       await tx.site.update({
         where: { id: site.id },
         data: {
-          name: site.name === 'My Buildora Site' ? 'Northstar Studio' : site.name,
-          themeId: site.themeId || 'agency',
+          name: 'Northstar Studio',
+          themeId: 'agency',
           themeConfig: {
             ...themeConfig,
-            tagline: themeConfig.tagline || 'Strategy, design, and digital experiences that move brands forward.',
-            accentColor: themeConfig.accentColor || '#2563eb',
-            seoTitle: themeConfig.seoTitle || 'Northstar Studio — Strategy & Digital Experiences',
-            seoDescription: themeConfig.seoDescription || 'A modern creative studio helping ambitious brands turn clear strategy into memorable digital experiences.',
+            tagline: 'Strategy, design, and digital experiences that move brands forward.',
+            accentColor: '#2563eb',
+            seoTitle: 'Northstar Studio — Strategy & Digital Experiences',
+            seoDescription: 'A modern creative studio helping ambitious brands turn clear strategy into memorable digital experiences.',
           },
         },
       });
