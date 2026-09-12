@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { FormEvent, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import type { FormEvent } from 'react';
 import { publicApi } from '../lib/api-client';
 import { DemoStore, INITIAL_DEMO_STATE } from '../lib/demo-store';
 import type { DemoStoreState, PostItem } from '../lib/types';
@@ -15,31 +16,45 @@ type PublicFormConfig = {
 };
 
 type IntegrationConfig = Record<string, { enabled: boolean; value?: string }>;
+type TiptapNode = {
+  type?: string;
+  attrs?: { level?: number };
+  text?: string;
+  content?: TiptapNode[];
+};
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function renderNode(node: TiptapNode): string {
+  if (node.type === 'text') return escapeHtml(node.text || '');
+  const inner = (node.content || []).map(renderNode).join('');
+  if (node.type === 'doc') return inner;
+  if (node.type === 'heading') {
+    const level = node.attrs?.level === 1 ? 'h1' : node.attrs?.level === 3 ? 'h3' : 'h2';
+    return `<${level}>${inner}</${level}>`;
+  }
+  if (node.type === 'paragraph') return inner ? `<p>${inner}</p>` : '';
+  if (node.type === 'blockquote') return inner ? `<blockquote>${inner}</blockquote>` : '';
+  if (node.type === 'bulletList') return `<ul>${inner}</ul>`;
+  if (node.type === 'orderedList') return `<ol>${inner}</ol>`;
+  if (node.type === 'listItem') return `<li>${inner}</li>`;
+  if (node.type === 'hardBreak') return '<br />';
+  return inner;
+}
 
 function extractContentHtml(item?: { content?: string; contentJson?: Record<string, unknown> | null }): string {
   if (!item) return '';
-  if (typeof item.content === 'string' && item.content.trim().length > 0) return item.content;
   if (item.contentJson && typeof item.contentJson === 'object') {
-    const doc = item.contentJson as {
-      type?: string;
-      content?: Array<{ type?: string; attrs?: { level?: number }; content?: Array<{ text?: string }>; text?: string }>;
-    };
-    if (Array.isArray(doc.content)) {
-      return doc.content
-        .map((n) => {
-          const text = n.text || (n.content || []).map((c) => c.text || '').join('');
-          if (n.type === 'heading') {
-            const level = n.attrs?.level === 1 ? 'h1' : n.attrs?.level === 3 ? 'h3' : 'h2';
-            return `<${level}>${text}</${level}>`;
-          }
-          if (n.type === 'paragraph') return text ? `<p>${text}</p>` : '';
-          if (n.type === 'blockquote') return `<blockquote>${text}</blockquote>`;
-          return text ? `<p>${text}</p>` : '';
-        })
-        .filter(Boolean)
-        .join('');
-    }
+    return renderNode(item.contentJson as TiptapNode);
   }
+  if (typeof item.content === 'string' && item.content.trim().length > 0) return item.content;
   return '';
 }
 
