@@ -51,6 +51,7 @@ export function OverviewView() {
       if (!response.ok) throw new Error(payload?.message || 'Unable to duplicate site');
       await refreshData();
       showNotice(`Created ${payload.name}`);
+      if (payload?.slug) window.open(`/site/${payload.slug}`, '_blank', 'noopener,noreferrer');
     } catch (error) {
       showNotice(error instanceof Error ? error.message : 'Unable to duplicate site');
     }
