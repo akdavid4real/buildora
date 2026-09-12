@@ -30,7 +30,7 @@ export function VersionHistory({
   };
 
   useEffect(() => {
-    load();
+    void load();
   }, [siteId, pageId]);
 
   const snapshot = async () => {
@@ -51,7 +51,10 @@ export function VersionHistory({
         `/api/sites/${siteId}/pages/${pageId}/versions/${versionId}/restore`,
         { method: 'POST' },
       );
-      if (response.ok) await onRestored();
+      if (response.ok) {
+        await onRestored();
+        await load();
+      }
     } finally {
       setBusy(false);
     }
@@ -61,17 +64,19 @@ export function VersionHistory({
     <div className="card" style={{ padding: 22 }}>
       <div className="panel-title"><History size={16} /> Version history</div>
       <p style={{ fontSize: 12, color: '#6f7c77' }}>
-        Save snapshots before major edits and restore any of the last 20 versions.
+        Buildora automatically saves the previous page whenever you edit it. Manual checkpoints are available before major changes.
       </p>
       <button className="btn btn-secondary" type="button" onClick={snapshot} disabled={busy} style={{ width: '100%' }}>
-        <Save size={14} /> {busy ? 'Working…' : 'Save snapshot'}
+        <Save size={14} /> {busy ? 'Working…' : 'Create checkpoint'}
       </button>
-      {versions.length > 0 && (
+      {versions.length === 0 ? (
+        <p style={{ color: '#71807a', fontSize: 12, marginBottom: 0, textAlign: 'center' }}>No earlier versions yet.</p>
+      ) : (
         <div style={{ display: 'grid', gap: 7, marginTop: 12 }}>
           {versions.map((version) => (
             <div key={version.id} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, alignItems: 'center', padding: '8px 0', borderTop: '1px solid #edf0ee' }}>
-              <div>
-                <strong style={{ display: 'block', fontSize: 12 }}>{version.title}</strong>
+              <div style={{ minWidth: 0 }}>
+                <strong style={{ display: 'block', fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis' }}>{version.title}</strong>
                 <small style={{ color: '#71807a' }}>{new Date(version.createdAt).toLocaleString()}</small>
               </div>
               <button className="btn btn-secondary" type="button" onClick={() => restore(version.id)} disabled={busy} title="Restore version" style={{ padding: '6px 8px' }}>
