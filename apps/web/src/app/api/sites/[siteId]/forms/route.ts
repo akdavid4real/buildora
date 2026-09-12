@@ -73,8 +73,6 @@ export async function POST(request: Request, { params }: { params: { siteId: str
       await tx.page.upsert({
         where: { siteId_slug: { siteId: site.id, slug: form.pageSlug } },
         update: {
-          title: form.title,
-          contentJson: formIntro(form),
           status: 'PUBLISHED',
           publishedAt: new Date(),
         },
@@ -122,7 +120,6 @@ export async function PATCH(request: Request, { params }: { params: { siteId: st
       await tx.page.updateMany({
         where: { siteId: site.id, slug: updatedForm.pageSlug },
         data: {
-          title: updatedForm.title,
           status: updatedForm.enabled ? 'PUBLISHED' : 'DRAFT',
           publishedAt: updatedForm.enabled ? new Date() : null,
         },
