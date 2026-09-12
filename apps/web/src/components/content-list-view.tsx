@@ -45,17 +45,18 @@ export function ContentListView({ kind }: { kind: 'pages' | 'posts' }) {
     else deletePost(item.id, `Deleted "${item.title}"`);
   };
 
-  const handleDuplicatePage = async (item: PageItem | PostItem) => {
-    if (!isPages || !currentSite) return;
+  const handleDuplicate = async (item: PageItem | PostItem) => {
+    if (!currentSite) return;
+    const entity = isPages ? 'pages' : 'posts';
     try {
-      const response = await fetch(`/api/sites/${currentSite.id}/pages/${item.id}/duplicate`, { method: 'POST' });
+      const response = await fetch(`/api/sites/${currentSite.id}/${entity}/${item.id}/duplicate`, { method: 'POST' });
       const payload = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(payload?.message || 'Unable to duplicate page');
+      if (!response.ok) throw new Error(payload?.message || `Unable to duplicate ${isPages ? 'page' : 'post'}`);
       await refreshData();
-      showNotice('Page duplicated');
-      router.push(`/dashboard/pages/${payload.id}`);
+      showNotice(`${isPages ? 'Page' : 'Post'} duplicated`);
+      router.push(`/dashboard/${kind}/${payload.id}`);
     } catch (error) {
-      showNotice(error instanceof Error ? error.message : 'Unable to duplicate page');
+      showNotice(error instanceof Error ? error.message : `Unable to duplicate ${isPages ? 'page' : 'post'}`);
     }
   };
 
@@ -65,7 +66,7 @@ export function ContentListView({ kind }: { kind: 'pages' | 'posts' }) {
         <div>
           <span className="eyebrow">{isPages ? 'Content structure' : 'Editorial stories'}</span>
           <h2>{isPages ? 'Pages' : 'Blog posts'}</h2>
-          <p>{isPages ? 'Organize, duplicate and publish pages across your website.' : 'Publish articles, announcements and tutorials for your audience.'}</p>
+          <p>{isPages ? 'Organize, duplicate and publish pages across your website.' : 'Publish, duplicate and refine articles for your audience.'}</p>
         </div>
         <button className="btn btn-primary" onClick={handleCreate}>
           <Plus size={16} /> {isPages ? 'New page' : 'New post'}
@@ -117,7 +118,7 @@ export function ContentListView({ kind }: { kind: 'pages' | 'posts' }) {
                       <div className="table-actions">
                         {item.status === 'PUBLISHED' && <a href={publicUrl} target="_blank" rel="noopener noreferrer" className="btn btn-secondary" style={{ padding: '6px 10px', fontSize: 13 }} title="View on live site"><Eye size={14} /></a>}
                         <button className="btn btn-secondary" style={{ padding: '6px 10px', fontSize: 13 }} onClick={() => handleTogglePublish(item)}><Globe2 size={14} />{item.status === 'PUBLISHED' ? 'Unpublish' : 'Publish'}</button>
-                        {isPages && <button className="btn btn-secondary" style={{ padding: '6px 10px', fontSize: 13 }} onClick={() => handleDuplicatePage(item)} title="Duplicate page"><Copy size={14} /></button>}
+                        <button className="btn btn-secondary" style={{ padding: '6px 10px', fontSize: 13 }} onClick={() => handleDuplicate(item)} title={`Duplicate ${isPages ? 'page' : 'post'}`}><Copy size={14} /></button>
                         <Link href={editHref} className="btn btn-primary" style={{ padding: '6px 12px', fontSize: 13, textDecoration: 'none' }}><Edit3 size={14} />Edit</Link>
                         {(!isPages || !(item as PageItem).isHomepage) && <button className="btn btn-danger" style={{ padding: '6px 10px', fontSize: 13 }} onClick={() => handleDelete(item)} title="Delete item"><Trash2 size={14} /></button>}
                       </div>
