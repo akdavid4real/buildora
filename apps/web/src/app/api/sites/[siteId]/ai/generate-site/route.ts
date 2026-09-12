@@ -27,12 +27,16 @@ function cleanJson(text: string) {
   return text.trim().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```$/i, '').trim();
 }
 
+function slugify(value: string) {
+  return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 70) || `story-${Date.now().toString(36)}`;
+}
+
 export async function POST(request: Request, { params }: { params: { siteId: string } }) {
   const apiKey = process.env.MISTRAL_API_KEY;
   if (!apiKey) return jsonError('AI is not configured yet. Add MISTRAL_API_KEY.', 503);
 
   try {
-    await assertOwnedSite(params.siteId);
+    const { site: ownedSite } = await assertOwnedSite(params.siteId);
     const user = await getHackathonUser();
     const body = (await request.json()) as { description?: string };
     const description = body.description?.trim();
@@ -48,7 +52,7 @@ export async function POST(request: Request, { params }: { params: { siteId: str
       body: JSON.stringify({
         model: MODEL,
         temperature: 0.65,
-        max_tokens: 2200,
+        max_tokens: 2400,
         messages: [
           {
             role: 'system',
@@ -83,6 +87,12 @@ export async function POST(request: Request, { params }: { params: { siteId: str
 
     const themeId = (THEME_IDS as readonly string[]).includes(generated.themeId) ? generated.themeId : 'small-business';
     const accentColor = /^#[0-9a-f]{6}$/i.test(generated.accentColor || '') ? generated.accentColor : '#174d3e';
+    const blogIdeas = Array.isArray(generated.blogIdeas)
+      ? generated.blogIdeas.map((idea: unknown) => String(idea).trim()).filter(Boolean).slice(0, 3)
+      : [];
+    const existingConfig = ownedSite.themeConfig && typeof ownedSite.themeConfig === 'object'
+      ? (ownedSite.themeConfig as Record<string, unknown>)
+      : {};
 
     const site = await prisma.site.update({
       where: { id: params.siteId },
@@ -90,19 +100,20 @@ export async function POST(request: Request, { params }: { params: { siteId: str
         name: String(generated.siteName || 'My Buildora Site').slice(0, 100),
         themeId,
         themeConfig: {
+          ...existingConfig,
           tagline: String(generated.tagline || '').slice(0, 220),
           accentColor,
           seoTitle: String(generated.seoTitle || '').slice(0, 70),
           seoDescription: String(generated.seoDescription || '').slice(0, 160),
           generatedFrom: description,
-          blogIdeas: Array.isArray(generated.blogIdeas) ? generated.blogIdeas.slice(0, 3) : [],
+          blogIdeas,
         },
       },
     });
 
-    const homeBody = Array.isArray(generated.home?.body) ? generated.home.body : [];
-    const aboutBody = Array.isArray(generated.about?.body) ? generated.about.body : [];
-    const servicesBody = Array.isArray(generated.services?.body) ? generated.services.body : [];
+    const homeBody = Array.isArray(generated.home?.body) ? generated.home.body.map(String) : [];
+    const aboutBody = Array.isArray(generated.about?.body) ? generated.about.body.map(String) : [];
+    const servicesBody = Array.isArray(generated.services?.body) ? generated.services.body.map(String) : [];
 
     await prisma.$transaction(async (tx) => {
       await tx.page.updateMany({ where: { siteId: params.siteId, isHomepage: true }, data: { isHomepage: false } });
@@ -128,6 +139,30 @@ export async function POST(request: Request, { params }: { params: { siteId: str
           create: { siteId: params.siteId, slug: page.slug, title: page.title, contentJson: page.contentJson, isHomepage: page.isHomepage, status: 'PUBLISHED', publishedAt: new Date() },
         });
       }
+
+      for (const idea of blogIdeas) {
+        const slug = slugify(idea);
+        const excerpt = `A practical guide from ${String(generated.siteName || 'our team')} about ${idea.toLowerCase()}.`;
+        await tx.post.upsert({
+          where: { siteId_slug: { siteId: params.siteId, slug } },
+          update: {
+            title: idea,
+            excerpt,
+            contentJson: tiptap(idea, [excerpt, 'Use the AI writing assistant to expand this starter article into a complete post.']),
+            status: 'PUBLISHED',
+            publishedAt: new Date(),
+          },
+          create: {
+            siteId: params.siteId,
+            title: idea,
+            slug,
+            excerpt,
+            contentJson: tiptap(idea, [excerpt, 'Use the AI writing assistant to expand this starter article into a complete post.']),
+            status: 'PUBLISHED',
+            publishedAt: new Date(),
+          },
+        });
+      }
     });
 
     const promptTokens = json.usage?.prompt_tokens ?? 0;
@@ -145,7 +180,7 @@ export async function POST(request: Request, { params }: { params: { siteId: str
         totalTokens,
         durationMs: Date.now() - started,
         success: true,
-        metadata: { kind: 'SITE_GENERATOR', descriptionLength: description.length },
+        metadata: { kind: 'SITE_GENERATOR', descriptionLength: description.length, generatedPosts: blogIdeas.length },
       },
     });
 
@@ -156,7 +191,7 @@ export async function POST(request: Request, { params }: { params: { siteId: str
         tagline: (site.themeConfig as Record<string, unknown>).tagline,
         themeId,
         accentColor,
-        blogIdeas: (site.themeConfig as Record<string, unknown>).blogIdeas,
+        blogIdeas,
       },
     });
   } catch (error) {
