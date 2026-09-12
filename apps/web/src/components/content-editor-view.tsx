@@ -54,9 +54,7 @@ export function ContentEditorView({ kind, id }: { kind: 'pages' | 'posts'; id: s
     content: item?.contentJson ?? item?.content ?? '',
     immediatelyRender: false,
     onBlur: ({ editor: currentEditor }) => {
-      if (item) {
-        patch({ content: currentEditor.getHTML(), contentJson: currentEditor.getJSON() });
-      }
+      if (item) patch({ content: currentEditor.getHTML(), contentJson: currentEditor.getJSON() });
     },
   });
 
@@ -86,11 +84,8 @@ export function ContentEditorView({ kind, id }: { kind: 'pages' | 'posts'; id: s
   };
 
   const handleSave = () => {
-    if (editor) {
-      patch({ content: editor.getHTML(), contentJson: editor.getJSON() }, 'Changes saved');
-    } else {
-      patch({ content: item.content }, 'Changes saved');
-    }
+    if (editor) patch({ content: editor.getHTML(), contentJson: editor.getJSON() }, 'Changes saved');
+    else patch({ content: item.content }, 'Changes saved');
   };
 
   const handleTogglePublish = () => {
@@ -102,6 +97,7 @@ export function ContentEditorView({ kind, id }: { kind: 'pages' | 'posts'; id: s
   };
 
   const handleDelete = () => {
+    if (!window.confirm(`Delete this ${isPages ? 'page' : 'post'} permanently?`)) return;
     if (isPages) {
       deletePage(item.id, `Deleted "${item.title}"`);
       router.push('/dashboard/pages');
@@ -121,7 +117,6 @@ export function ContentEditorView({ kind, id }: { kind: 'pages' | 'posts'; id: s
       showNotice('Open a connected site to use AI.');
       return;
     }
-
     setAiLoading(actionType);
     try {
       const response = await aiApi.generate(currentSite.id, {
@@ -129,7 +124,6 @@ export function ContentEditorView({ kind, id }: { kind: 'pages' | 'posts'; id: s
         context: getAiContext() || item.title,
         targetEntity: isPages ? 'PAGE' : 'POST',
       });
-
       if (actionType === 'TITLE') {
         const firstTitle = response.suggestion
           .split('\n')
@@ -164,8 +158,12 @@ export function ContentEditorView({ kind, id }: { kind: 'pages' | 'posts'; id: s
       showNotice('Open a connected site and add some content first.');
       return;
     }
-    const text = editor.getText().trim();
-    if (!text) {
+
+    const { from, to, empty } = editor.state.selection;
+    const selectedText = empty ? '' : editor.state.doc.textBetween(from, to, '\n').trim();
+    const fullText = editor.getText().trim();
+    const sourceText = selectedText || fullText;
+    if (!sourceText) {
       showNotice('Add some text before using AI rewrite.');
       return;
     }
@@ -174,14 +172,19 @@ export function ContentEditorView({ kind, id }: { kind: 'pages' | 'posts'; id: s
     try {
       const response = await aiApi.generate(currentSite.id, {
         actionType: mode.actionType,
-        context: text,
-        instructions: mode.instructions,
+        context: sourceText,
+        instructions: `${mode.instructions}${selectedText ? ' Rewrite only the selected passage and return only its replacement.' : ''}`,
         targetEntity: isPages ? 'PAGE' : 'POST',
       });
-      editor.commands.setContent(response.suggestion);
+
+      if (selectedText) {
+        editor.chain().focus().insertContentAt({ from, to }, response.suggestion).run();
+      } else {
+        editor.commands.setContent(response.suggestion);
+      }
       patch(
         { content: editor.getHTML(), contentJson: editor.getJSON() },
-        `${mode.label} rewrite applied`,
+        `${mode.label} rewrite applied${selectedText ? ' to selection' : ''}`,
       );
     } catch (error) {
       showNotice(error instanceof Error ? error.message : 'AI rewrite failed');
@@ -191,7 +194,7 @@ export function ContentEditorView({ kind, id }: { kind: 'pages' | 'posts'; id: s
   };
 
   const publicUrl = isPages
-    ? `/site/${state.site.siteSlug}${item.slug ? `/${item.slug}` : ''}`
+    ? `/site/${state.site.siteSlug}${(item as PageItem).isHomepage ? '' : item.slug ? `/${item.slug}` : ''}`
     : `/site/${state.site.siteSlug}/blog/${item.slug}`;
 
   return (
@@ -264,14 +267,14 @@ export function ContentEditorView({ kind, id }: { kind: 'pages' | 'posts'; id: s
           <div className="ai-card" style={{ margin: 0 }}>
             <div className="panel-title"><WandSparkles size={17} /> AI writing assistant</div>
             <span className="badge">Mistral AI</span>
-            <p style={{ marginTop: 8 }}>Generate titles, full drafts, SEO metadata, or instantly rewrite your current content.</p>
+            <p style={{ marginTop: 8 }}>Generate titles, full drafts, SEO metadata, or rewrite selected text. With no selection, rewrite the whole document.</p>
             <div className="ai-actions">
               <button type="button" disabled={Boolean(aiLoading)} onClick={() => runAi('TITLE')}>{aiLoading === 'TITLE' ? 'Generating…' : '✨ Generate a title'}</button>
               <button type="button" disabled={Boolean(aiLoading)} onClick={() => runAi('DRAFT')}>{aiLoading === 'DRAFT' ? 'Generating…' : '✨ Generate first draft'}</button>
               <button type="button" disabled={Boolean(aiLoading)} onClick={() => runAi('SEO_METADATA')}>{aiLoading === 'SEO_METADATA' ? 'Generating…' : '✨ Generate SEO details'}</button>
             </div>
             <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid #d9e7e0' }}>
-              <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.08em', color: '#53615c', marginBottom: 8 }}>REWRITE CURRENT CONTENT</div>
+              <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.08em', color: '#53615c', marginBottom: 8 }}>REWRITE SELECTION / CONTENT</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
                 {REWRITE_MODES.map((mode) => (
                   <button
