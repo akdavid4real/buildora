@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = env("TURSO_DATABASE_URL")
 }
 
 enum Role {
@@ -91,10 +91,8 @@ model Page {
   site           Site          @relation(fields: [siteId], references: [id], onDelete: Cascade)
   title          String
   slug           String
-  /// Canonical Tiptap JSON document root: {"type":"doc","content":[]}
   contentJson    Json          @default("{\"type\":\"doc\",\"content\":[]}")
   status         ContentStatus @default(DRAFT)
-  /// Note: The invariant of at most one homepage per site is enforced transactionally in the service layer.
   isHomepage     Boolean       @default(false)
   seoTitle       String?
   seoDescription String?
@@ -114,10 +112,9 @@ model Post {
   site           Site          @relation(fields: [siteId], references: [id], onDelete: Cascade)
   title          String
   slug           String
-  excerpt        String?       @db.Text
+  excerpt        String?
   coverImageId   String?
   coverImage     MediaAsset?   @relation("PostCoverImage", fields: [coverImageId], references: [id], onDelete: SetNull)
-  /// Canonical Tiptap JSON document root: {"type":"doc","content":[]}
   contentJson    Json          @default("{\"type\":\"doc\",\"content\":[]}")
   status         ContentStatus @default(DRAFT)
   seoTitle       String?
