@@ -56,7 +56,6 @@ export function PublicSite({ slug, path }: { slug: string; path: string[] }) {
     let active = true;
 
     const loadSite = async () => {
-      // If demo slug is requested directly, load demo store immediately
       if (slug === 'my-site' || slug === 'demo') {
         if (active) {
           setState(DemoStore.getState());
@@ -80,8 +79,7 @@ export function PublicSite({ slug, path }: { slug: string; path: string[] }) {
                 String((publicSite.themeConfig as Record<string, unknown>)?.accentColor || '') ||
                 '#174d3e',
               customDomain:
-                typeof (publicSite.themeConfig as Record<string, unknown>)?.customDomain ===
-                'string'
+                typeof (publicSite.themeConfig as Record<string, unknown>)?.customDomain === 'string'
                   ? ((publicSite.themeConfig as Record<string, unknown>).customDomain as string)
                   : undefined,
               seoTitle:
@@ -89,8 +87,7 @@ export function PublicSite({ slug, path }: { slug: string; path: string[] }) {
                   ? ((publicSite.themeConfig as Record<string, unknown>).seoTitle as string)
                   : undefined,
               seoDescription:
-                typeof (publicSite.themeConfig as Record<string, unknown>)?.seoDescription ===
-                'string'
+                typeof (publicSite.themeConfig as Record<string, unknown>)?.seoDescription === 'string'
                   ? ((publicSite.themeConfig as Record<string, unknown>).seoDescription as string)
                   : undefined,
             },
@@ -159,7 +156,9 @@ export function PublicSite({ slug, path }: { slug: string; path: string[] }) {
   const isBlog = path[0] === 'blog';
   const postSlug = path[1];
   const pageSlug = path[0] ?? '';
-  const page = state.pages.find((item) => item.status === 'PUBLISHED' && item.slug === pageSlug);
+  const page = pageSlug
+    ? state.pages.find((item) => item.status === 'PUBLISHED' && item.slug === pageSlug)
+    : state.pages.find((item) => item.status === 'PUBLISHED' && item.isHomepage);
   const post = state.posts.find((item) => item.status === 'PUBLISHED' && item.slug === postSlug);
   const publishedPosts = state.posts.filter((item) => item.status === 'PUBLISHED');
 
