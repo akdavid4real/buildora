@@ -40,7 +40,15 @@ export interface MediaItem {
   createdAt: string;
 }
 
-export type ThemeId = 'minimal-blog' | 'small-business' | 'personal-portfolio';
+export type ThemeId =
+  | 'minimal-blog'
+  | 'small-business'
+  | 'personal-portfolio'
+  | 'agency'
+  | 'restaurant'
+  | 'saas'
+  | 'event'
+  | 'personal-brand';
 
 export interface SiteSettings {
   siteName: string;
