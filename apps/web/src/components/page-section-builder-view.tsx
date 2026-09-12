@@ -36,7 +36,9 @@ export function PageSectionBuilderView({ id }: { id: string }) {
     },
   };
 
-  const publicUrl = `/site/${state.site.siteSlug}${page.slug ? `/${page.slug}` : ''}`;
+  const publicUrl = page.isHomepage
+    ? `/site/${state.site.siteSlug}`
+    : `/site/${state.site.siteSlug}${page.slug ? `/${page.slug}` : ''}`;
 
   return (
     <div className="content">
@@ -63,10 +65,7 @@ export function PageSectionBuilderView({ id }: { id: string }) {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 380px) minmax(0, 1fr)', gap: 20, alignItems: 'start' }}>
-        <SectionBuilder
-          editor={editorLike}
-          onChanged={() => patchPage(id, { contentJson: editorLike.getJSON() })}
-        />
+        <SectionBuilder editor={editorLike} />
         <div className="card" style={{ padding: 0, overflow: 'hidden', minHeight: 660 }}>
           <div style={{ padding: '12px 16px', borderBottom: '1px solid #e5ebe8', fontSize: 12, fontWeight: 800, color: '#53615c' }}>
             LIVE PAGE PREVIEW
