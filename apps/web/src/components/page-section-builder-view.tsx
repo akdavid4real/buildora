@@ -58,7 +58,7 @@ export function PageSectionBuilderView({ id }: { id: string }) {
           <h2 style={{ marginBottom: 6 }}>{page.title}</h2>
           <p>Add ready-made blocks, reuse saved layouts, save versions and drag content into the order you want.</p>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <a href={publicUrl} target="_blank" rel="noopener noreferrer" className="btn btn-secondary">
             <Eye size={15} /> Preview
           </a>
@@ -71,8 +71,8 @@ export function PageSectionBuilderView({ id }: { id: string }) {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 380px) minmax(0, 1fr)', gap: 20, alignItems: 'start' }}>
-        <div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,360px),1fr))', gap: 20, alignItems: 'start' }}>
+        <div style={{ minWidth: 0 }}>
           <SectionBuilder editor={editorLike} />
           <ReusableSections getNodes={getNodes} onInsert={insertReusable} />
           {currentSite && (
@@ -81,7 +81,7 @@ export function PageSectionBuilderView({ id }: { id: string }) {
             </div>
           )}
         </div>
-        <div className="card" style={{ padding: 0, overflow: 'hidden', minHeight: 660 }}>
+        <div className="card" style={{ padding: 0, overflow: 'hidden', minHeight: 520, minWidth: 0 }}>
           <div style={{ padding: '12px 16px', borderBottom: '1px solid #e5ebe8', fontSize: 12, fontWeight: 800, color: '#53615c' }}>
             LIVE PAGE PREVIEW
           </div>
@@ -89,7 +89,7 @@ export function PageSectionBuilderView({ id }: { id: string }) {
             key={`${page.updatedAt}-${page.slug}`}
             title="Live page preview"
             src={publicUrl}
-            style={{ width: '100%', minHeight: 620, border: 0, background: 'white' }}
+            style={{ width: '100%', minHeight: 520, border: 0, background: 'white' }}
           />
         </div>
       </div>
