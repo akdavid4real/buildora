@@ -1,6 +1,7 @@
 'use client';
 
 import { Download, ExternalLink, Inbox, Plus, Power, Trash2 } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useDemo } from '../lib/demo-context';
 
@@ -22,10 +23,17 @@ type Submission = {
 
 export function FormsView() {
   const { currentSite, state, showNotice } = useDemo();
+  const searchParams = useSearchParams();
+  const requestedPageSlug = searchParams.get('pageSlug')?.trim() || '';
   const [forms, setForms] = useState<SiteForm[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [type, setType] = useState<SiteForm['type']>('contact');
+  const [pageSlug, setPageSlug] = useState(requestedPageSlug);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (requestedPageSlug) setPageSlug(requestedPageSlug);
+  }, [requestedPageSlug]);
 
   const load = async () => {
     if (!currentSite) return;
@@ -45,15 +53,17 @@ export function FormsView() {
     if (!currentSite) return;
     setLoading(true);
     try {
+      const fallbackSlug = type === 'newsletter' ? 'newsletter' : type === 'booking' ? 'booking' : 'contact';
+      const targetPageSlug = (pageSlug || fallbackSlug).replace(/^\/+|\/+$/g, '');
       const response = await fetch(`/api/sites/${currentSite.id}/forms`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type, pageSlug: type === 'newsletter' ? 'newsletter' : type === 'booking' ? 'booking' : 'contact' }),
+        body: JSON.stringify({ type, pageSlug: targetPageSlug }),
       });
       const payload = await response.json().catch(() => null);
       if (!response.ok) throw new Error(payload?.message || 'Unable to create form');
       await load();
-      showNotice('Form created and landing page published');
+      showNotice(`Form connected to /${targetPageSlug}`);
     } catch (error) {
       showNotice(error instanceof Error ? error.message : 'Unable to create form');
     } finally {
@@ -114,16 +124,30 @@ export function FormsView() {
           <span className="eyebrow">Lead capture</span>
           <h2>Forms</h2>
           <p>Create contact, newsletter, and booking forms. Responses are stored in Turso.</p>
+          {requestedPageSlug && (
+            <p style={{ marginTop: 8, fontSize: 13, color: '#526960' }}>
+              Visual builder handoff: attach this form to <strong>/{requestedPageSlug}</strong>.
+            </p>
+          )}
         </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <select className="select" value={type} onChange={(e) => setType(e.target.value as SiteForm['type'])}>
-            <option value="contact">Contact form</option>
-            <option value="newsletter">Newsletter signup</option>
-            <option value="booking">Booking enquiry</option>
-          </select>
-          <button className="btn btn-primary" onClick={createForm} disabled={loading || !currentSite}>
-            <Plus size={15} /> {loading ? 'Creating…' : 'Create form'}
-          </button>
+        <div style={{ display: 'grid', gap: 8, minWidth: 260 }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <select className="select" value={type} onChange={(e) => setType(e.target.value as SiteForm['type'])}>
+              <option value="contact">Contact form</option>
+              <option value="newsletter">Newsletter signup</option>
+              <option value="booking">Booking enquiry</option>
+            </select>
+            <button className="btn btn-primary" onClick={createForm} disabled={loading || !currentSite}>
+              <Plus size={15} /> {loading ? 'Creating…' : 'Create form'}
+            </button>
+          </div>
+          <input
+            className="input"
+            value={pageSlug}
+            onChange={(e) => setPageSlug(e.target.value.replace(/[^a-zA-Z0-9-]/g, '').toLowerCase())}
+            placeholder="Landing page slug, e.g. contact"
+            aria-label="Form landing page slug"
+          />
         </div>
       </div>
 
