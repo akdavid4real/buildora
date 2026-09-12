@@ -9,16 +9,29 @@ import type { ThemeId } from '../../lib/types';
 const slugify = (value: string) =>
   value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
-const THEMES: Array<{ id: ThemeId; name: string; description: string; className: string }> = [
-  { id: 'minimal-blog', name: 'Minimal Blog', description: 'Editorial and content-first.', className: '' },
-  { id: 'small-business', name: 'Small Business', description: 'Professional and conversion-ready.', className: 'business' },
-  { id: 'personal-portfolio', name: 'Portfolio', description: 'Creative and personality-led.', className: 'portfolio' },
-  { id: 'agency', name: 'Agency', description: 'Bold and expertise-led.', className: 'agency' },
-  { id: 'restaurant', name: 'Restaurant', description: 'Warm and hospitality-focused.', className: 'restaurant' },
-  { id: 'saas', name: 'SaaS', description: 'Clean, modern and product-led.', className: 'saas' },
-  { id: 'event', name: 'Event', description: 'Energetic and attendance-focused.', className: 'event' },
-  { id: 'personal-brand', name: 'Personal Brand', description: 'Confident and creator-friendly.', className: 'personal-brand' },
+const THEMES: Array<{ id: ThemeId; name: string; description: string }> = [
+  { id: 'minimal-blog', name: 'Minimal Blog', description: 'Editorial and content-first.' },
+  { id: 'small-business', name: 'Small Business', description: 'Professional and conversion-ready.' },
+  { id: 'personal-portfolio', name: 'Portfolio', description: 'Creative and personality-led.' },
+  { id: 'agency', name: 'Agency', description: 'Bold and expertise-led.' },
+  { id: 'restaurant', name: 'Restaurant', description: 'Warm and hospitality-focused.' },
+  { id: 'saas', name: 'SaaS', description: 'Clean, modern and product-led.' },
+  { id: 'event', name: 'Event', description: 'Energetic and attendance-focused.' },
+  { id: 'personal-brand', name: 'Personal Brand', description: 'Confident and creator-friendly.' },
 ];
+
+const previewStyle = (themeId: ThemeId): React.CSSProperties => {
+  switch (themeId) {
+    case 'small-business': return { background: '#f4fbf8', color: '#184a3c', borderColor: '#d4e9df' };
+    case 'personal-portfolio': return { background: '#efe6db', color: '#402f27' };
+    case 'agency': return { background: '#0f172a', color: '#f8fafc', borderColor: '#1e293b' };
+    case 'restaurant': return { background: 'linear-gradient(145deg,#2b1b15,#6b3f2a)', color: '#fff4e6', borderColor: '#8b5a3c' };
+    case 'saas': return { background: 'linear-gradient(145deg,#eef4ff,#ffffff)', color: '#1d4ed8', borderColor: '#bfd1ff' };
+    case 'event': return { background: 'linear-gradient(145deg,#3b0764,#7e22ce)', color: '#f5e9ff', borderColor: '#a855f7' };
+    case 'personal-brand': return { background: 'linear-gradient(145deg,#fff1f2,#fff7ed)', color: '#9f1239', borderColor: '#fecdd3' };
+    default: return { background: '#fffdfa', color: '#24332e', borderColor: '#e7dfd4' };
+  }
+};
 
 export default function OnboardingPage() {
   const { state, updateState, hydrated, currentSite, refreshData } = useDemo();
@@ -112,7 +125,7 @@ export default function OnboardingPage() {
             <div className="themes">
               {THEMES.map((theme) => (
                 <button type="button" key={theme.id} className={`theme ${themeId === theme.id ? 'selected' : ''}`} onClick={() => setThemeId(theme.id)}>
-                  <div className={`theme-preview ${theme.className}`}>
+                  <div className="theme-preview" style={previewStyle(theme.id)}>
                     <small>BUILDORA</small>
                     <b>{name || 'Your website'}</b>
                     <span />
