@@ -4,9 +4,10 @@ import { assertOwnedSite, jsonError } from '../../../../../server/hackathon';
 export async function POST(_: Request, { params }: { params: { siteId: string } }) {
   try {
     const { user, site } = await assertOwnedSite(params.siteId);
-    const [pages, posts] = await Promise.all([
+    const [pages, posts, media] = await Promise.all([
       prisma.page.findMany({ where: { siteId: site.id } }),
       prisma.post.findMany({ where: { siteId: site.id } }),
+      prisma.mediaAsset.findMany({ where: { siteId: site.id } }),
     ]);
 
     const suffix = Date.now().toString(36);
@@ -21,6 +22,26 @@ export async function POST(_: Request, { params }: { params: { siteId: string } 
           themeConfig: site.themeConfig,
         },
       });
+
+      const mediaMap = new Map<string, string>();
+      for (const asset of media) {
+        const cloned = await tx.mediaAsset.create({
+          data: {
+            siteId: newSite.id,
+            uploaderId: user.id,
+            filename: asset.filename,
+            originalFilename: asset.originalFilename,
+            mimeType: asset.mimeType,
+            sizeBytes: asset.sizeBytes,
+            s3Key: `${newSite.id}/${suffix}-${asset.id}-${asset.filename}`,
+            publicUrl: asset.publicUrl,
+            width: asset.width,
+            height: asset.height,
+            altText: asset.altText,
+          },
+        });
+        mediaMap.set(asset.id, cloned.id);
+      }
 
       for (const page of pages) {
         await tx.page.create({
@@ -45,6 +66,7 @@ export async function POST(_: Request, { params }: { params: { siteId: string } 
             title: post.title,
             slug: post.slug,
             excerpt: post.excerpt,
+            coverImageId: post.coverImageId ? mediaMap.get(post.coverImageId) ?? null : null,
             contentJson: post.contentJson,
             status: post.status,
             seoTitle: post.seoTitle,
