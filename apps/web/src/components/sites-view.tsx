@@ -17,11 +17,7 @@ export function SitesView() {
   const switchSite = async (site: (typeof sites)[number]) => {
     setSwitching(site.id);
     try {
-      const response = await fetch(`/api/sites/${site.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: site.name }),
-      });
+      const response = await fetch(`/api/sites/${site.id}/activate`, { method: 'POST' });
       if (!response.ok) throw new Error('Unable to switch site');
       await refreshData();
       showNotice(`Switched to ${site.name}`);
