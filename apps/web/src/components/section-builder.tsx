@@ -54,6 +54,33 @@ export const SECTION_LIBRARY = [
     ],
   },
   {
+    id: 'pricing',
+    name: 'Pricing',
+    description: 'Drop in three simple pricing tiers visitors can compare quickly.',
+    nodes: [
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Simple pricing' }] },
+      { type: 'paragraph', content: [{ type: 'text', text: 'Choose the option that best matches what you need today.' }] },
+      { type: 'heading', attrs: { level: 3 }, content: [{ type: 'text', text: 'Starter — ₦25,000' }] },
+      { type: 'paragraph', content: [{ type: 'text', text: 'A focused starter option for individuals or small projects.' }] },
+      { type: 'heading', attrs: { level: 3 }, content: [{ type: 'text', text: 'Growth — ₦75,000' }] },
+      { type: 'paragraph', content: [{ type: 'text', text: 'More support and flexibility for growing businesses.' }] },
+      { type: 'heading', attrs: { level: 3 }, content: [{ type: 'text', text: 'Premium — Contact us' }] },
+      { type: 'paragraph', content: [{ type: 'text', text: 'A tailored option for larger or more complex needs.' }] },
+    ],
+  },
+  {
+    id: 'team',
+    name: 'Team',
+    description: 'Introduce the people behind the business.',
+    nodes: [
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Meet the team' }] },
+      { type: 'heading', attrs: { level: 3 }, content: [{ type: 'text', text: 'Ada — Founder' }] },
+      { type: 'paragraph', content: [{ type: 'text', text: 'Add a short introduction, role, and what this person brings to the team.' }] },
+      { type: 'heading', attrs: { level: 3 }, content: [{ type: 'text', text: 'Tobi — Operations' }] },
+      { type: 'paragraph', content: [{ type: 'text', text: 'Add another team member and a concise description of their role.' }] },
+    ],
+  },
+  {
     id: 'cta',
     name: 'CTA',
     description: 'A focused call to action for the next step.',
@@ -99,6 +126,16 @@ export const SECTION_LIBRARY = [
     nodes: [
       { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Let’s talk' }] },
       { type: 'paragraph', content: [{ type: 'text', text: 'Tell visitors how to reach you, what information to include, and when they can expect a reply.' }] },
+    ],
+  },
+  {
+    id: 'form',
+    name: 'Form',
+    description: 'Add a form-ready section, then connect a live form from the Forms workspace.',
+    nodes: [
+      { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Get in touch' }] },
+      { type: 'paragraph', content: [{ type: 'text', text: 'Use Buildora Forms to attach a Contact, Newsletter, or Booking form to this page.' }] },
+      { type: 'paragraph', content: [{ type: 'text', text: 'Tip: open Forms from the dashboard, create the form, and use this page slug as its landing page.' }] },
     ],
   },
 ] as const;
