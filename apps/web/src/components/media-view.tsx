@@ -1,6 +1,5 @@
 'use client';
 
-import type { AllowedMediaMimeType } from '@buildora/contracts';
 import { Loader2, Trash2, Upload } from 'lucide-react';
 import React, { useState } from 'react';
 import { mediaApi } from '../lib/api-client';
@@ -13,43 +12,21 @@ export function MediaView() {
   const handleUpload = async (files: FileList | null) => {
     if (!files?.length) return;
     const file = files[0];
-    if (!file.type.startsWith('image/')) {
-      showNotice('Please select an image file (JPEG, PNG, WebP, GIF)');
+
+    if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
+      showNotice('Please select a JPEG, PNG, WebP, or GIF image.');
+      return;
+    }
+    if (file.size > 1_500_000) {
+      showNotice('For the hackathon demo, images must be 1.5MB or smaller.');
       return;
     }
 
     setUploading(true);
 
-    if (isApiMode && currentSite) {
-      try {
-        // Step 1: Request upload presigned URL
-        const uploadReq = await mediaApi.requestUpload(currentSite.id, {
-          filename: file.name,
-          mimeType: file.type as AllowedMediaMimeType,
-          sizeBytes: file.size,
-        });
-
-        // Step 2: Upload file directly to S3 via presigned PUT
-        const s3Res = await fetch(uploadReq.uploadUrl, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': file.type,
-          },
-          body: file,
-        });
-
-        if (!s3Res.ok) {
-          throw new Error(`S3 upload failed with status ${s3Res.status}`);
-        }
-
-        // Step 3: Confirm upload on backend
-        const confirmed = await mediaApi.confirmUpload(currentSite.id, {
-          s3Key: uploadReq.s3Key,
-          originalFilename: file.name,
-          mimeType: file.type as AllowedMediaMimeType,
-          sizeBytes: file.size,
-        });
-
+    try {
+      if (isApiMode && currentSite) {
+        const confirmed = await mediaApi.upload(currentSite.id, file);
         updateState(
           {
             ...state,
@@ -65,46 +42,52 @@ export function MediaView() {
               ...state.media,
             ],
           },
-          'Image uploaded to S3 media library',
+          'Image uploaded and saved',
         );
-        setUploading(false);
         return;
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : 'Upload failed';
-        showNotice(`API upload notice: ${msg} (saving to session)`);
       }
-    }
 
-    // Local fallback using Data URL
-    const reader = new FileReader();
-    reader.onload = () => {
-      updateState(
-        {
-          ...state,
-          media: [
-            {
-              id: `media-${Date.now()}`,
-              name: file.name,
-              mimeType: file.type,
-              sizeBytes: file.size,
-              url: String(reader.result),
-              createdAt: new Date().toISOString(),
-            },
-            ...state.media,
-          ],
-        },
-        'Image saved to local media library',
-      );
+      const reader = new FileReader();
+      reader.onload = () => {
+        updateState(
+          {
+            ...state,
+            media: [
+              {
+                id: `media-${Date.now()}`,
+                name: file.name,
+                mimeType: file.type,
+                sizeBytes: file.size,
+                url: String(reader.result),
+                createdAt: new Date().toISOString(),
+              },
+              ...state.media,
+            ],
+          },
+          'Image saved to local media library',
+        );
+      };
+      reader.onerror = () => showNotice('Failed to read image file');
+      reader.readAsDataURL(file);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Upload failed';
+      showNotice(`Upload failed: ${msg}`);
+    } finally {
       setUploading(false);
-    };
-    reader.onerror = () => {
-      showNotice('Failed to read image file');
-      setUploading(false);
-    };
-    reader.readAsDataURL(file);
+    }
   };
 
   const handleDelete = async (id: string) => {
+    if (isApiMode && currentSite) {
+      try {
+        await mediaApi.delete(currentSite.id, id);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Failed to delete on server';
+        showNotice(msg);
+        return;
+      }
+    }
+
     updateState(
       {
         ...state,
@@ -112,15 +95,6 @@ export function MediaView() {
       },
       'Image removed',
     );
-
-    if (isApiMode && currentSite) {
-      try {
-        await mediaApi.delete(currentSite.id, id);
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : 'Failed to delete on server';
-        showNotice(`API Media Delete Notice: ${msg}`);
-      }
-    }
   };
 
   return (
@@ -131,7 +105,7 @@ export function MediaView() {
           <h2>Your visual assets</h2>
           <p>
             {isApiMode
-              ? 'Upload and manage media assets connected to your API backend.'
+              ? 'Upload images once and reuse them across your published content.'
               : 'Upload and manage images for this browser session.'}
           </p>
         </div>
@@ -142,7 +116,7 @@ export function MediaView() {
             hidden
             type="file"
             disabled={uploading}
-            accept="image/*"
+            accept="image/jpeg,image/png,image/webp,image/gif"
             onChange={(e) => handleUpload(e.target.files)}
           />
         </label>
@@ -158,7 +132,7 @@ export function MediaView() {
               hidden
               type="file"
               disabled={uploading}
-              accept="image/*"
+              accept="image/jpeg,image/png,image/webp,image/gif"
               onChange={(e) => handleUpload(e.target.files)}
             />
           </label>
