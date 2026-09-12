@@ -19,6 +19,7 @@ export function ContentListView({ kind }: { kind: 'pages' | 'posts' }) {
     currentSite,
     refreshData,
     showNotice,
+    isApiMode,
   } = useDemo();
   const router = useRouter();
   const collection = isPages ? state.pages : state.posts;
@@ -30,19 +31,55 @@ export function ContentListView({ kind }: { kind: 'pages' | 'posts' }) {
     } catch {}
   };
 
-  const handleTogglePublish = (item: PageItem | PostItem) => {
+  const handleTogglePublish = async (item: PageItem | PostItem) => {
     const isPublished = item.status === 'PUBLISHED';
+
+    if (isApiMode && currentSite) {
+      try {
+        const entity = isPages ? 'pages' : 'posts';
+        const action = isPublished ? 'unpublish' : 'publish';
+        const response = await fetch(`/api/sites/${currentSite.id}/${entity}/${item.id}/${action}`, {
+          method: 'POST',
+        });
+        const payload = await response.json().catch(() => null);
+        if (!response.ok) {
+          throw new Error(payload?.message || `Unable to ${action} ${isPages ? 'page' : 'post'}`);
+        }
+        await refreshData();
+        showNotice(isPublished ? 'Moved to drafts' : `${isPages ? 'Page' : 'Post'} published`);
+      } catch (error) {
+        showNotice(error instanceof Error ? error.message : 'Unable to change publish state');
+      }
+      return;
+    }
+
     const patch = {
       status: (isPublished ? 'DRAFT' : 'PUBLISHED') as 'DRAFT' | 'PUBLISHED',
       publishedAt: isPublished ? null : new Date().toISOString(),
     };
-    if (isPages) patchPage(item.id, patch, isPublished ? 'Moved to drafts' : 'Page published');
-    else patchPost(item.id, patch, isPublished ? 'Moved to drafts' : 'Post published');
+    if (isPages) await patchPage(item.id, patch, isPublished ? 'Moved to drafts' : 'Page published');
+    else await patchPost(item.id, patch, isPublished ? 'Moved to drafts' : 'Post published');
   };
 
-  const handleDelete = (item: PageItem | PostItem) => {
-    if (isPages) deletePage(item.id, `Deleted "${item.title}"`);
-    else deletePost(item.id, `Deleted "${item.title}"`);
+  const handleDelete = async (item: PageItem | PostItem) => {
+    if (isApiMode && currentSite) {
+      try {
+        const entity = isPages ? 'pages' : 'posts';
+        const response = await fetch(`/api/sites/${currentSite.id}/${entity}/${item.id}`, { method: 'DELETE' });
+        const payload = await response.json().catch(() => null);
+        if (!response.ok) {
+          throw new Error(payload?.message || `Unable to delete ${isPages ? 'page' : 'post'}`);
+        }
+        await refreshData();
+        showNotice(`Deleted "${item.title}"`);
+      } catch (error) {
+        showNotice(error instanceof Error ? error.message : `Unable to delete ${isPages ? 'page' : 'post'}`);
+      }
+      return;
+    }
+
+    if (isPages) await deletePage(item.id, `Deleted "${item.title}"`);
+    else await deletePost(item.id, `Deleted "${item.title}"`);
   };
 
   const handleDuplicate = async (item: PageItem | PostItem) => {
@@ -117,10 +154,10 @@ export function ContentListView({ kind }: { kind: 'pages' | 'posts' }) {
                     <td data-label="Actions">
                       <div className="table-actions">
                         {item.status === 'PUBLISHED' && <a href={publicUrl} target="_blank" rel="noopener noreferrer" className="btn btn-secondary" style={{ padding: '6px 10px', fontSize: 13 }} title="View on live site"><Eye size={14} /></a>}
-                        <button className="btn btn-secondary" style={{ padding: '6px 10px', fontSize: 13 }} onClick={() => handleTogglePublish(item)}><Globe2 size={14} />{item.status === 'PUBLISHED' ? 'Unpublish' : 'Publish'}</button>
-                        <button className="btn btn-secondary" style={{ padding: '6px 10px', fontSize: 13 }} onClick={() => handleDuplicate(item)} title={`Duplicate ${isPages ? 'page' : 'post'}`}><Copy size={14} /></button>
+                        <button className="btn btn-secondary" style={{ padding: '6px 10px', fontSize: 13 }} onClick={() => void handleTogglePublish(item)}><Globe2 size={14} />{item.status === 'PUBLISHED' ? 'Unpublish' : 'Publish'}</button>
+                        <button className="btn btn-secondary" style={{ padding: '6px 10px', fontSize: 13 }} onClick={() => void handleDuplicate(item)} title={`Duplicate ${isPages ? 'page' : 'post'}`}><Copy size={14} /></button>
                         <Link href={editHref} className="btn btn-primary" style={{ padding: '6px 12px', fontSize: 13, textDecoration: 'none' }}><Edit3 size={14} />Edit</Link>
-                        {(!isPages || !(item as PageItem).isHomepage) && <button className="btn btn-danger" style={{ padding: '6px 10px', fontSize: 13 }} onClick={() => handleDelete(item)} title="Delete item"><Trash2 size={14} /></button>}
+                        {(!isPages || !(item as PageItem).isHomepage) && <button className="btn btn-danger" style={{ padding: '6px 10px', fontSize: 13 }} onClick={() => void handleDelete(item)} title="Delete item"><Trash2 size={14} /></button>}
                       </div>
                     </td>
                   </tr>
