@@ -3,6 +3,7 @@ name: Hackathon Next Build
 on:
   push:
     branches:
+      - main
       - hackathon/fullstack-next
   pull_request:
     branches:
@@ -11,6 +12,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      TURSO_DATABASE_URL: file:./buildora-ci.db
+      TURSO_AUTH_TOKEN: ""
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -21,7 +25,7 @@ jobs:
           bun-version: latest
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: bun install
 
       - name: Generate Prisma client
         run: bun run db:generate
@@ -31,5 +35,3 @@ jobs:
 
       - name: Build web
         run: bun --filter @buildora/web build
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/buildora?schema=public
