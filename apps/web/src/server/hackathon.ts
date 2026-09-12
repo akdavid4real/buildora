@@ -14,6 +14,17 @@ export async function getHackathonUser() {
   });
 }
 
+export function toPublicUser(user: Awaited<ReturnType<typeof getHackathonUser>>) {
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+  };
+}
+
 export async function assertOwnedSite(siteId: string) {
   const user = await getHackathonUser();
   const site = await prisma.site.findFirst({
