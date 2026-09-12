@@ -74,7 +74,7 @@ export function PageSectionBuilderView({ id }: { id: string }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,360px),1fr))', gap: 20, alignItems: 'start' }}>
         <div style={{ minWidth: 0 }}>
           <SectionBuilder editor={editorLike} />
-          <ReusableSections getNodes={getNodes} onInsert={insertReusable} />
+          <ReusableSections getNodes={getNodes} onInsert={insertReusable} siteId={currentSite?.id} />
           {currentSite && (
             <div style={{ marginTop: 14 }}>
               <VersionHistory siteId={currentSite.id} pageId={id} onRestored={refreshData} />
