@@ -155,37 +155,26 @@ export const authApi = {
       body: JSON.stringify(dto),
     });
     authStorage.setAccessToken(data.accessToken);
-    if (data.user) {
-      authStorage.setUser(data.user);
-    }
+    if (data.user) authStorage.setUser(data.user);
     return data;
   },
-
   async register(dto: RegisterDto): Promise<RegisterResponse> {
     const data = await apiFetch<RegisterResponse>('/auth/register', {
       method: 'POST',
       body: JSON.stringify(dto),
     });
     authStorage.setAccessToken(data.accessToken);
-    if (data.user) {
-      authStorage.setUser(data.user);
-    }
+    if (data.user) authStorage.setUser(data.user);
     return data;
   },
-
   async getMe(): Promise<UserResponse> {
-    const data = await apiFetch<UserResponse>('/auth/me', {
-      method: 'GET',
-    });
+    const data = await apiFetch<UserResponse>('/auth/me', { method: 'GET' });
     authStorage.setUser(data);
     return data;
   },
-
   async logout(): Promise<void> {
     try {
-      await apiFetch<{ message: string }>('/auth/logout', {
-        method: 'POST',
-      });
+      await apiFetch<{ message: string }>('/auth/logout', { method: 'POST' });
     } finally {
       authStorage.clearAccessToken();
       authStorage.clearUser();
@@ -201,10 +190,7 @@ export const sitesApi = {
     return apiFetch<SiteResponse>(`/sites/${siteId}`);
   },
   async create(dto: CreateSiteDto): Promise<SiteResponse> {
-    return apiFetch<SiteResponse>('/sites', {
-      method: 'POST',
-      body: JSON.stringify(dto),
-    });
+    return apiFetch<SiteResponse>('/sites', { method: 'POST', body: JSON.stringify(dto) });
   },
   async update(siteId: string, dto: UpdateSiteDto): Promise<SiteResponse> {
     return apiFetch<SiteResponse>(`/sites/${siteId}`, {
@@ -216,93 +202,65 @@ export const sitesApi = {
 
 export const pagesApi = {
   async list(siteId: string, query?: PageListQuery): Promise<PaginatedResponse<PageResponse>> {
-    return apiFetch<PaginatedResponse<PageResponse>>(
-      `/sites/${siteId}/pages${toQueryString(query)}`,
-    );
+    return apiFetch<PaginatedResponse<PageResponse>>(`/sites/${siteId}/pages${toQueryString(query)}`);
   },
   async get(siteId: string, pageId: string): Promise<PageResponse> {
     return apiFetch<PageResponse>(`/sites/${siteId}/pages/${pageId}`);
   },
   async create(siteId: string, dto: CreatePageDto): Promise<PageResponse> {
-    return apiFetch<PageResponse>(`/sites/${siteId}/pages`, {
-      method: 'POST',
-      body: JSON.stringify(dto),
-    });
+    return apiFetch<PageResponse>(`/sites/${siteId}/pages`, { method: 'POST', body: JSON.stringify(dto) });
   },
   async update(siteId: string, pageId: string, dto: UpdatePageDto): Promise<PageResponse> {
-    return apiFetch<PageResponse>(`/sites/${siteId}/pages/${pageId}`, {
-      method: 'PATCH',
-      body: JSON.stringify(dto),
-    });
+    return apiFetch<PageResponse>(`/sites/${siteId}/pages/${pageId}`, { method: 'PATCH', body: JSON.stringify(dto) });
   },
   async delete(siteId: string, pageId: string): Promise<void> {
-    return apiFetch<void>(`/sites/${siteId}/pages/${pageId}`, {
-      method: 'DELETE',
-    });
+    return apiFetch<void>(`/sites/${siteId}/pages/${pageId}`, { method: 'DELETE' });
   },
   async publish(siteId: string, pageId: string): Promise<PageResponse> {
-    return apiFetch<PageResponse>(`/sites/${siteId}/pages/${pageId}/publish`, {
-      method: 'POST',
-    });
+    return apiFetch<PageResponse>(`/sites/${siteId}/pages/${pageId}/publish`, { method: 'POST' });
   },
   async unpublish(siteId: string, pageId: string): Promise<PageResponse> {
-    return apiFetch<PageResponse>(`/sites/${siteId}/pages/${pageId}/unpublish`, {
-      method: 'POST',
-    });
+    return apiFetch<PageResponse>(`/sites/${siteId}/pages/${pageId}/unpublish`, { method: 'POST' });
   },
 };
 
 export const postsApi = {
   async list(siteId: string, query?: PostListQuery): Promise<PaginatedResponse<PostResponse>> {
-    return apiFetch<PaginatedResponse<PostResponse>>(
-      `/sites/${siteId}/posts${toQueryString(query)}`,
-    );
+    return apiFetch<PaginatedResponse<PostResponse>>(`/sites/${siteId}/posts${toQueryString(query)}`);
   },
   async get(siteId: string, postId: string): Promise<PostResponse> {
     return apiFetch<PostResponse>(`/sites/${siteId}/posts/${postId}`);
   },
   async create(siteId: string, dto: CreatePostDto): Promise<PostResponse> {
-    return apiFetch<PostResponse>(`/sites/${siteId}/posts`, {
-      method: 'POST',
-      body: JSON.stringify(dto),
-    });
+    return apiFetch<PostResponse>(`/sites/${siteId}/posts`, { method: 'POST', body: JSON.stringify(dto) });
   },
   async update(siteId: string, postId: string, dto: UpdatePostDto): Promise<PostResponse> {
-    return apiFetch<PostResponse>(`/sites/${siteId}/posts/${postId}`, {
-      method: 'PATCH',
-      body: JSON.stringify(dto),
-    });
+    return apiFetch<PostResponse>(`/sites/${siteId}/posts/${postId}`, { method: 'PATCH', body: JSON.stringify(dto) });
   },
   async delete(siteId: string, postId: string): Promise<void> {
-    return apiFetch<void>(`/sites/${siteId}/posts/${postId}`, {
-      method: 'DELETE',
-    });
+    return apiFetch<void>(`/sites/${siteId}/posts/${postId}`, { method: 'DELETE' });
   },
   async publish(siteId: string, postId: string): Promise<PostResponse> {
-    return apiFetch<PostResponse>(`/sites/${siteId}/posts/${postId}/publish`, {
-      method: 'POST',
-    });
+    return apiFetch<PostResponse>(`/sites/${siteId}/posts/${postId}/publish`, { method: 'POST' });
   },
   async unpublish(siteId: string, postId: string): Promise<PostResponse> {
-    return apiFetch<PostResponse>(`/sites/${siteId}/posts/${postId}/unpublish`, {
-      method: 'POST',
-    });
+    return apiFetch<PostResponse>(`/sites/${siteId}/posts/${postId}/unpublish`, { method: 'POST' });
   },
 };
 
 export const mediaApi = {
-  async list(
-    siteId: string,
-    query?: MediaListQuery,
-  ): Promise<PaginatedResponse<MediaAssetResponse>> {
-    return apiFetch<PaginatedResponse<MediaAssetResponse>>(
-      `/sites/${siteId}/media${toQueryString(query)}`,
-    );
+  async list(siteId: string, query?: MediaListQuery): Promise<PaginatedResponse<MediaAssetResponse>> {
+    return apiFetch<PaginatedResponse<MediaAssetResponse>>(`/sites/${siteId}/media${toQueryString(query)}`);
   },
-  async requestUpload(
-    siteId: string,
-    dto: RequestMediaUploadDto,
-  ): Promise<RequestMediaUploadResponse> {
+  async upload(siteId: string, file: File): Promise<MediaAssetResponse> {
+    const form = new FormData();
+    form.append('file', file);
+    return apiFetch<MediaAssetResponse>(`/sites/${siteId}/media/upload`, {
+      method: 'POST',
+      body: form,
+    });
+  },
+  async requestUpload(siteId: string, dto: RequestMediaUploadDto): Promise<RequestMediaUploadResponse> {
     return apiFetch<RequestMediaUploadResponse>(`/sites/${siteId}/media/upload-request`, {
       method: 'POST',
       body: JSON.stringify(dto),
@@ -314,20 +272,14 @@ export const mediaApi = {
       body: JSON.stringify(dto),
     });
   },
-  async update(
-    siteId: string,
-    mediaId: string,
-    dto: UpdateMediaAssetDto,
-  ): Promise<MediaAssetResponse> {
+  async update(siteId: string, mediaId: string, dto: UpdateMediaAssetDto): Promise<MediaAssetResponse> {
     return apiFetch<MediaAssetResponse>(`/sites/${siteId}/media/${mediaId}`, {
       method: 'PATCH',
       body: JSON.stringify(dto),
     });
   },
   async delete(siteId: string, mediaId: string): Promise<void> {
-    return apiFetch<void>(`/sites/${siteId}/media/${mediaId}`, {
-      method: 'DELETE',
-    });
+    return apiFetch<void>(`/sites/${siteId}/media/${mediaId}`, { method: 'DELETE' });
   },
 };
 
