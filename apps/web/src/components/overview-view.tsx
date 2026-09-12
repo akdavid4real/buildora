@@ -2,6 +2,7 @@
 
 import {
   BookOpen,
+  Copy,
   FileText,
   Globe2,
   Image as ImageIcon,
@@ -17,7 +18,7 @@ import { useRouter } from 'next/navigation';
 import { useDemo } from '../lib/demo-context';
 
 export function OverviewView() {
-  const { state, createPage, isApiMode } = useDemo();
+  const { state, createPage, isApiMode, currentSite, refreshData, showNotice } = useDemo();
   const router = useRouter();
   const firstPage = state.pages[0];
 
@@ -36,8 +37,19 @@ export function OverviewView() {
     try {
       const id = await createPage();
       if (id) router.push(`/dashboard/pages/${id}`);
-    } catch {
-      // Creation failed; remain on overview view.
+    } catch {}
+  };
+
+  const duplicateSite = async () => {
+    if (!currentSite) return;
+    try {
+      const response = await fetch(`/api/sites/${currentSite.id}/duplicate`, { method: 'POST' });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(payload?.message || 'Unable to duplicate site');
+      await refreshData();
+      showNotice(`Created ${payload.name}`);
+    } catch (error) {
+      showNotice(error instanceof Error ? error.message : 'Unable to duplicate site');
     }
   };
 
@@ -54,13 +66,14 @@ export function OverviewView() {
             <WandSparkles size={16} /> AI site builder
           </Link>
           {firstPage && (
-            <Link
-              href={`/dashboard/pages/${firstPage.id}/sections`}
-              className="btn btn-secondary"
-              style={{ textDecoration: 'none' }}
-            >
+            <Link href={`/dashboard/pages/${firstPage.id}/sections`} className="btn btn-secondary" style={{ textDecoration: 'none' }}>
               <LayoutTemplate size={16} /> Visual builder
             </Link>
+          )}
+          {isApiMode && currentSite && (
+            <button className="btn btn-secondary" onClick={duplicateSite}>
+              <Copy size={16} /> Duplicate site
+            </button>
           )}
           <button className="btn btn-primary" onClick={handleCreateContent}>
             <Plus size={16} /> Create content
@@ -76,9 +89,7 @@ export function OverviewView() {
               <strong>{value}</strong>
               <span>Ready to share</span>
             </div>
-            <span className="icon-box">
-              <Icon size={19} />
-            </span>
+            <span className="icon-box"><Icon size={19} /></span>
           </div>
         ))}
       </section>
@@ -91,19 +102,12 @@ export function OverviewView() {
               const isPost = 'authorName' in item;
               const href = isPost ? `/dashboard/posts/${item.id}` : `/dashboard/pages/${item.id}`;
               return (
-                <Link
-                  key={item.id}
-                  href={href}
-                  className="activity-row"
-                  style={{ textDecoration: 'none', color: 'inherit' }}
-                >
+                <Link key={item.id} href={href} className="activity-row" style={{ textDecoration: 'none', color: 'inherit' }}>
                   <div>
                     <strong>{item.title}</strong>
                     <small>{isPost ? 'Blog post' : 'Page'} · {item.status.toLowerCase()}</small>
                   </div>
-                  <span className={`badge ${item.status === 'DRAFT' ? 'draft' : ''}`}>
-                    {item.status}
-                  </span>
+                  <span className={`badge ${item.status === 'DRAFT' ? 'draft' : ''}`}>{item.status}</span>
                 </Link>
               );
             })}
@@ -113,29 +117,14 @@ export function OverviewView() {
         <div className="card">
           <h3>Quick actions</h3>
           <div className="quick">
-            <Link href="/dashboard/pages" style={{ textDecoration: 'none' }} className="btn btn-secondary">
-              <FileText size={18} /> Pages
-            </Link>
-            <Link href="/dashboard/posts" style={{ textDecoration: 'none' }} className="btn btn-secondary">
-              <BookOpen size={18} /> Blog posts
-            </Link>
-            <Link href="/dashboard/media" style={{ textDecoration: 'none' }} className="btn btn-secondary">
-              <Upload size={18} /> Media
-            </Link>
-            <Link href="/dashboard/appearance" style={{ textDecoration: 'none' }} className="btn btn-secondary">
-              <Palette size={18} /> Themes
-            </Link>
+            <Link href="/dashboard/pages" style={{ textDecoration: 'none' }} className="btn btn-secondary"><FileText size={18} /> Pages</Link>
+            <Link href="/dashboard/posts" style={{ textDecoration: 'none' }} className="btn btn-secondary"><BookOpen size={18} /> Blog posts</Link>
+            <Link href="/dashboard/media" style={{ textDecoration: 'none' }} className="btn btn-secondary"><Upload size={18} /> Media</Link>
+            <Link href="/dashboard/appearance" style={{ textDecoration: 'none' }} className="btn btn-secondary"><Palette size={18} /> Themes</Link>
           </div>
           <div className="ai-card" style={{ marginTop: 16, marginBottom: 0 }}>
-            <div className="panel-title">
-              <Sparkles size={17} />
-              {isApiMode ? 'Connected workspace' : 'Offline demo mode'}
-            </div>
-            <p>
-              {isApiMode
-                ? 'Pages, posts, media and AI actions are connected to the Buildora backend.'
-                : 'Local demo mode keeps the interface usable without a database connection.'}
-            </p>
+            <div className="panel-title"><Sparkles size={17} />{isApiMode ? 'Connected workspace' : 'Offline demo mode'}</div>
+            <p>{isApiMode ? 'Pages, posts, media and AI actions are connected to the Buildora backend.' : 'Local demo mode keeps the interface usable without a database connection.'}</p>
           </div>
         </div>
       </section>
