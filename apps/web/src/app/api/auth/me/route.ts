@@ -1,6 +1,6 @@
-import { getHackathonUser } from '../../../../server/hackathon';
+import { getHackathonUser, toPublicUser } from '../../../../server/hackathon';
 
 export async function GET() {
   const user = await getHackathonUser();
-  return Response.json(user);
+  return Response.json(toPublicUser(user));
 }
