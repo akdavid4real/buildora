@@ -1,6 +1,6 @@
 import { updatePageSchema } from '@buildora/contracts';
 import { prisma } from '@buildora/database';
-import { assertOwnedSite, jsonError } from '../../../../../../server/hackathon';
+import { assertOwnedSite, ensureHackathonSchema, jsonError } from '../../../../../../server/hackathon';
 
 async function getOwnedPage(siteId: string, pageId: string) {
   await assertOwnedSite(siteId);
@@ -19,9 +19,27 @@ export async function GET(_: Request, { params }: { params: { siteId: string; pa
 
 export async function PATCH(request: Request, { params }: { params: { siteId: string; pageId: string } }) {
   try {
-    await getOwnedPage(params.siteId, params.pageId);
+    const current = await getOwnedPage(params.siteId, params.pageId);
     const parsed = updatePageSchema.safeParse(await request.json());
     if (!parsed.success) return jsonError(parsed.error.issues[0]?.message ?? 'Invalid page data');
+
+    await ensureHackathonSchema();
+    await prisma.$executeRawUnsafe(
+      'INSERT INTO page_versions (id, pageId, siteId, title, slug, contentJson, seoTitle, seoDescription, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)',
+      crypto.randomUUID(),
+      current.id,
+      current.siteId,
+      current.title,
+      current.slug,
+      JSON.stringify(current.contentJson),
+      current.seoTitle,
+      current.seoDescription,
+    );
+    await prisma.$executeRawUnsafe(
+      'DELETE FROM page_versions WHERE pageId = ? AND id NOT IN (SELECT id FROM page_versions WHERE pageId = ? ORDER BY createdAt DESC LIMIT 30)',
+      current.id,
+      current.id,
+    );
 
     const updated = await prisma.$transaction(async (tx) => {
       if (parsed.data.isHomepage) {
