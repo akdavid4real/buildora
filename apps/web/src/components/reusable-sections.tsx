@@ -14,35 +14,75 @@ const STORAGE_KEY = 'buildora-reusable-sections-v1';
 export function ReusableSections({
   getNodes,
   onInsert,
+  siteId,
 }: {
   getNodes: () => Array<Record<string, unknown>>;
   onInsert: (nodes: Array<Record<string, unknown>>) => void;
+  siteId?: string;
 }) {
   const [templates, setTemplates] = useState<SavedTemplate[]>([]);
+  const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
+  const load = async () => {
+    if (siteId) {
+      try {
+        const response = await fetch(`/api/sites/${siteId}/reusable-sections`);
+        if (response.ok) {
+          const payload = await response.json();
+          setTemplates(payload.data || []);
+          return;
+        }
+      } catch {}
+    }
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setTemplates(JSON.parse(raw));
+      setTemplates(raw ? JSON.parse(raw) : []);
     } catch {
       setTemplates([]);
     }
-  }, []);
-
-  const persist = (next: SavedTemplate[]) => {
-    setTemplates(next);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
   };
 
-  const saveCurrent = () => {
+  useEffect(() => {
+    void load();
+  }, [siteId]);
+
+  const saveCurrent = async () => {
     const nodes = getNodes();
     if (!nodes.length) return;
     const name = window.prompt('Name this reusable section or layout:', 'My reusable section');
     if (!name?.trim()) return;
-    persist([
-      { id: crypto.randomUUID(), name: name.trim(), nodes: structuredClone(nodes) },
-      ...templates,
-    ]);
+    setSaving(true);
+    try {
+      if (siteId) {
+        const response = await fetch(`/api/sites/${siteId}/reusable-sections`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: name.trim(), nodes }),
+        });
+        if (response.ok) {
+          await load();
+          return;
+        }
+      }
+      const next = [{ id: crypto.randomUUID(), name: name.trim(), nodes: structuredClone(nodes) }, ...templates];
+      setTemplates(next);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const remove = async (id: string) => {
+    if (siteId) {
+      const response = await fetch(`/api/sites/${siteId}/reusable-sections?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      if (response.ok) {
+        setTemplates((items) => items.filter((item) => item.id !== id));
+        return;
+      }
+    }
+    const next = templates.filter((item) => item.id !== id);
+    setTemplates(next);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
   };
 
   return (
@@ -51,8 +91,8 @@ export function ReusableSections({
       <p style={{ fontSize: 12, color: '#6f7c77' }}>
         Save the current page blocks as a reusable template and drop them into another page later.
       </p>
-      <button className="btn btn-secondary" type="button" onClick={saveCurrent} style={{ width: '100%' }}>
-        <Save size={14} /> Save current layout
+      <button className="btn btn-secondary" type="button" onClick={saveCurrent} disabled={saving} style={{ width: '100%' }}>
+        <Save size={14} /> {saving ? 'Saving…' : 'Save current layout'}
       </button>
 
       {templates.length > 0 && (
@@ -62,22 +102,10 @@ export function ReusableSections({
               <span style={{ fontSize: 12, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {template.name}
               </span>
-              <button
-                className="btn btn-secondary"
-                type="button"
-                style={{ padding: '6px 8px' }}
-                onClick={() => onInsert(structuredClone(template.nodes))}
-                title="Insert reusable section"
-              >
+              <button className="btn btn-secondary" type="button" style={{ padding: '6px 8px' }} onClick={() => onInsert(structuredClone(template.nodes))} title="Insert reusable section">
                 <Plus size={13} />
               </button>
-              <button
-                className="btn btn-danger"
-                type="button"
-                style={{ padding: '6px 8px' }}
-                onClick={() => persist(templates.filter((item) => item.id !== template.id))}
-                title="Delete reusable section"
-              >
+              <button className="btn btn-danger" type="button" style={{ padding: '6px 8px' }} onClick={() => remove(template.id)} title="Delete reusable section">
                 <Trash2 size={13} />
               </button>
             </div>
