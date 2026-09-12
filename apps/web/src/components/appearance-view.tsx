@@ -5,18 +5,32 @@ import React from 'react';
 import { useDemo } from '../lib/demo-context';
 import type { ThemeId } from '../lib/types';
 
-const THEMES: { id: ThemeId; name: string; className: string; description: string }[] = [
-  { id: 'minimal-blog', name: 'Minimal Blog', className: '', description: 'Editorial, spacious and content-first typography.' },
-  { id: 'small-business', name: 'Small Business', className: 'business', description: 'Confident, welcoming and conversion-ready.' },
-  { id: 'personal-portfolio', name: 'Personal Portfolio', className: 'portfolio', description: 'Warm, creative and personality-led.' },
-  { id: 'agency', name: 'Agency', className: 'agency', description: 'Bold, sharp and designed to sell expertise.' },
-  { id: 'restaurant', name: 'Restaurant', className: 'restaurant', description: 'Rich, atmospheric and hospitality-focused.' },
-  { id: 'saas', name: 'SaaS', className: 'saas', description: 'Clean product-led styling with modern contrast.' },
-  { id: 'event', name: 'Event', className: 'event', description: 'Energetic, urgent and built around attendance.' },
-  { id: 'personal-brand', name: 'Personal Brand', className: 'personal-brand', description: 'Confident, expressive and creator-friendly.' },
+const THEMES: { id: ThemeId; name: string; description: string }[] = [
+  { id: 'minimal-blog', name: 'Minimal Blog', description: 'Editorial, spacious and content-first typography.' },
+  { id: 'small-business', name: 'Small Business', description: 'Confident, welcoming and conversion-ready.' },
+  { id: 'personal-portfolio', name: 'Personal Portfolio', description: 'Warm, creative and personality-led.' },
+  { id: 'agency', name: 'Agency', description: 'Bold, sharp and designed to sell expertise.' },
+  { id: 'restaurant', name: 'Restaurant', description: 'Rich, atmospheric and hospitality-focused.' },
+  { id: 'saas', name: 'SaaS', description: 'Clean product-led styling with modern contrast.' },
+  { id: 'event', name: 'Event', description: 'Energetic, urgent and built around attendance.' },
+  { id: 'personal-brand', name: 'Personal Brand', description: 'Confident, expressive and creator-friendly.' },
 ];
 
 const PRESET_COLORS = ['#174d3e', '#2563eb', '#7c3aed', '#c2410c', '#be123c', '#111827'];
+
+const previewStyle = (themeId: ThemeId, accent: string): React.CSSProperties => {
+  const base: React.CSSProperties = { '--green': accent } as React.CSSProperties;
+  switch (themeId) {
+    case 'small-business': return { ...base, background: '#f4fbf8', color: '#184a3c', borderColor: '#d4e9df' };
+    case 'personal-portfolio': return { ...base, background: '#efe6db', color: '#402f27' };
+    case 'agency': return { ...base, background: '#0f172a', color: '#f8fafc', borderColor: '#1e293b' };
+    case 'restaurant': return { ...base, background: 'linear-gradient(145deg,#2b1b15,#6b3f2a)', color: '#fff4e6', borderColor: '#8b5a3c' };
+    case 'saas': return { ...base, background: 'linear-gradient(145deg,#eef4ff,#ffffff)', color: '#1d4ed8', borderColor: '#bfd1ff' };
+    case 'event': return { ...base, background: 'linear-gradient(145deg,#3b0764,#7e22ce)', color: '#f5e9ff', borderColor: '#a855f7' };
+    case 'personal-brand': return { ...base, background: 'linear-gradient(145deg,#fff1f2,#fff7ed)', color: '#9f1239', borderColor: '#fecdd3' };
+    default: return { ...base, background: '#fffdfa', color: '#24332e', borderColor: '#e7dfd4' };
+  }
+};
 
 export function AppearanceView() {
   const { state, updateState } = useDemo();
@@ -49,7 +63,7 @@ export function AppearanceView() {
           const isSelected = state.site.themeId === theme.id;
           return (
             <button key={theme.id} className={`theme ${isSelected ? 'selected' : ''}`} onClick={() => handleSelectTheme(theme.id, theme.name)} type="button">
-              <div className={`theme-preview ${theme.className}`} style={{ '--green': state.site.accentColor } as React.CSSProperties}>
+              <div className="theme-preview" style={previewStyle(theme.id, state.site.accentColor)}>
                 <small>{state.site.siteName.toUpperCase()}</small>
                 <b>{state.site.tagline || 'Stories worth sharing.'}</b>
                 <span />
