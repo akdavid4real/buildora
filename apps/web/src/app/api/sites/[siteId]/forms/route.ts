@@ -16,6 +16,21 @@ function readForms(themeConfig: unknown): SiteForm[] {
   return Array.isArray(config.forms) ? (config.forms as SiteForm[]) : [];
 }
 
+function formIntro(form: SiteForm) {
+  const body = form.type === 'newsletter'
+    ? 'Subscribe for useful updates, ideas, and announcements.'
+    : form.type === 'booking'
+      ? 'Tell us what you need and the best time to reach you.'
+      : 'Send us a message and we will get back to you.';
+  return {
+    type: 'doc',
+    content: [
+      { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: form.title }] },
+      { type: 'paragraph', content: [{ type: 'text', text: body }] },
+    ],
+  };
+}
+
 export async function GET(_: Request, { params }: { params: { siteId: string } }) {
   try {
     const { site } = await assertOwnedSite(params.siteId);
@@ -46,9 +61,29 @@ export async function POST(request: Request, { params }: { params: { siteId: str
       enabled: body.enabled !== false,
     };
 
-    const updated = await prisma.site.update({
-      where: { id: site.id },
-      data: { themeConfig: { ...current, forms: [...forms, form] } },
+    const updated = await prisma.$transaction(async (tx) => {
+      const nextSite = await tx.site.update({
+        where: { id: site.id },
+        data: { themeConfig: { ...current, forms: [...forms, form] } },
+      });
+      await tx.page.upsert({
+        where: { siteId_slug: { siteId: site.id, slug: form.pageSlug } },
+        update: {
+          title: form.title,
+          contentJson: formIntro(form),
+          status: 'PUBLISHED',
+          publishedAt: new Date(),
+        },
+        create: {
+          siteId: site.id,
+          title: form.title,
+          slug: form.pageSlug,
+          contentJson: formIntro(form),
+          status: 'PUBLISHED',
+          publishedAt: new Date(),
+        },
+      });
+      return nextSite;
     });
 
     return Response.json({ form, themeConfig: updated.themeConfig }, { status: 201 });
