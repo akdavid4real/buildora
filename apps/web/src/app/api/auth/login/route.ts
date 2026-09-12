@@ -1,9 +1,9 @@
-import { getHackathonUser } from '../../../../server/hackathon';
+import { getHackathonUser, toPublicUser } from '../../../../server/hackathon';
 
 export async function POST() {
   const user = await getHackathonUser();
   return Response.json({
-    user,
+    user: toPublicUser(user),
     accessToken: 'buildora-hackathon-session',
   });
 }
