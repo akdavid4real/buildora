@@ -16,11 +16,12 @@ Buildora is an AI-powered website builder for quickly generating, editing, publi
 - Automatic page version history and restore
 - Page, post and whole-site duplication
 - Multi-site workspace manager
+- Portable JSON website export
 - Media uploads and post cover images
 - Contact, newsletter and booking forms
 - Turso-backed form submissions inbox + CSV export
 - Google Analytics, WhatsApp, Calendly, Mailchimp and Paystack integration settings
-- Public WhatsApp, Calendly and Paystack actions
+- Public WhatsApp, Calendly, Mailchimp and Paystack actions
 - Public site publishing and live previews
 - Deterministic polished demo seeder
 - Responsive dashboard and visual builder
@@ -35,9 +36,9 @@ Buildora is an AI-powered website builder for quickly generating, editing, publi
 6. Restore earlier page versions if needed.
 7. Upload images and choose post cover media.
 8. Create a contact, newsletter or booking form and publish its landing page automatically.
-9. Submit the public form and review the response in the Turso-backed inbox.
+9. Submit the public form and review/export the response from the Turso-backed inbox.
 10. Connect WhatsApp, Calendly, Analytics, Mailchimp or Paystack.
-11. Duplicate content or clone the entire website.
+11. Duplicate content, clone a whole website, switch workspaces, or export a portable site package.
 12. Open the published site.
 
 ## Stack
