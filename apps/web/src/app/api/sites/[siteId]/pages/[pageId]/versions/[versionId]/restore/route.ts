@@ -24,6 +24,18 @@ export async function POST(_: Request, { params }: { params: { siteId: string; p
     const version = rows[0];
     if (!version) return jsonError('Version not found', 404);
 
+    await prisma.$executeRawUnsafe(
+      'INSERT INTO page_versions (id, pageId, siteId, title, slug, contentJson, seoTitle, seoDescription, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)',
+      crypto.randomUUID(),
+      page.id,
+      page.siteId,
+      page.title,
+      page.slug,
+      JSON.stringify(page.contentJson),
+      page.seoTitle,
+      page.seoDescription,
+    );
+
     const restored = await prisma.page.update({
       where: { id: page.id },
       data: {
