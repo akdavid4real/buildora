@@ -59,7 +59,7 @@ export function PageSectionBuilderView({ id }: { id: string }) {
           <p>Add ready-made blocks, reuse saved layouts, connect forms, save versions and drag content into the order you want.</p>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <Link href="/dashboard/forms" className="btn btn-secondary" style={{ textDecoration: 'none' }}>
+          <Link href={`/dashboard/forms?pageSlug=${encodeURIComponent(page.slug)}`} className="btn btn-secondary" style={{ textDecoration: 'none' }}>
             <FormInput size={15} /> Connect form
           </Link>
           <a href={publicUrl} target="_blank" rel="noopener noreferrer" className="btn btn-secondary">
