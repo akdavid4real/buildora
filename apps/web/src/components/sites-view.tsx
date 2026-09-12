@@ -1,6 +1,6 @@
 'use client';
 
-import { ExternalLink, Plus, RefreshCw } from 'lucide-react';
+import { Copy, ExternalLink, Plus, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 import { useDemo } from '../lib/demo-context';
 
@@ -12,6 +12,7 @@ export function SitesView() {
   const { sites, currentSite, refreshData, showNotice } = useDemo();
   const [switching, setSwitching] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [duplicating, setDuplicating] = useState<string | null>(null);
 
   const switchSite = async (site: (typeof sites)[number]) => {
     setSwitching(site.id);
@@ -50,11 +51,26 @@ export function SitesView() {
       const payload = await response.json().catch(() => null);
       if (!response.ok) throw new Error(payload?.message || 'Unable to create site');
       await refreshData();
-      showNotice(`${name} created`);
+      showNotice(`${name} created and selected`);
     } catch (error) {
       showNotice(error instanceof Error ? error.message : 'Unable to create site');
     } finally {
       setCreating(false);
+    }
+  };
+
+  const duplicate = async (site: (typeof sites)[number]) => {
+    setDuplicating(site.id);
+    try {
+      const response = await fetch(`/api/sites/${site.id}/duplicate`, { method: 'POST' });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(payload?.message || 'Unable to duplicate site');
+      await refreshData();
+      showNotice(`${payload.name} created and selected`);
+    } catch (error) {
+      showNotice(error instanceof Error ? error.message : 'Unable to duplicate site');
+    } finally {
+      setDuplicating(null);
     }
   };
 
@@ -77,21 +93,22 @@ export function SitesView() {
           return (
             <article className="card" key={site.id} style={{ borderColor: active ? '#6da895' : undefined }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, marginBottom: 10 }}>
-                <div>
+                <div style={{ minWidth: 0 }}>
                   <strong style={{ fontSize: 17 }}>{site.name}</strong>
-                  <div style={{ color: '#71807a', fontSize: 12, marginTop: 4 }}>/site/{site.slug}</div>
+                  <div style={{ color: '#71807a', fontSize: 12, marginTop: 4, overflow: 'hidden', textOverflow: 'ellipsis' }}>/site/{site.slug}</div>
                 </div>
                 {active && <span className="badge">Active</span>}
               </div>
-              <p style={{ fontSize: 13, color: '#6f7c77', minHeight: 36 }}>
-                Theme: {site.themeId || 'minimal-blog'}
-              </p>
+              <p style={{ fontSize: 13, color: '#6f7c77', minHeight: 36 }}>Theme: {site.themeId || 'minimal-blog'}</p>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {!active && (
                   <button className="btn btn-secondary" onClick={() => switchSite(site)} disabled={switching === site.id}>
-                    <RefreshCw size={14} /> {switching === site.id ? 'Switching…' : 'Edit this site'}
+                    <RefreshCw size={14} /> {switching === site.id ? 'Switching…' : 'Edit'}
                   </button>
                 )}
+                <button className="btn btn-secondary" onClick={() => duplicate(site)} disabled={duplicating === site.id}>
+                  <Copy size={14} /> {duplicating === site.id ? 'Cloning…' : 'Clone'}
+                </button>
                 <a className="btn btn-secondary" href={`/site/${site.slug}`} target="_blank" rel="noopener noreferrer">
                   <ExternalLink size={14} /> Open
                 </a>
