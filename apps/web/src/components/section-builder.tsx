@@ -8,7 +8,7 @@ type EditorLike = {
   commands: { setContent: (content: unknown) => void };
 };
 
-const SECTION_LIBRARY = [
+export const SECTION_LIBRARY = [
   {
     id: 'hero',
     name: 'Hero',
