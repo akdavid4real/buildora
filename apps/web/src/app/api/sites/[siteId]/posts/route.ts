@@ -6,13 +6,17 @@ export async function GET(request: Request, { params }: { params: { siteId: stri
   try {
     await assertOwnedSite(params.siteId);
     const url = new URL(request.url);
-    const parsed = postListQuerySchema.safeParse(Object.fromEntries(url.searchParams));
-    const query = parsed.success ? parsed.data : { page: 1, limit: 20 };
+    const query = postListQuerySchema.parse(Object.fromEntries(url.searchParams));
     const where = {
       siteId: params.siteId,
       ...(query.status ? { status: query.status } : {}),
       ...(query.search
-        ? { OR: [{ title: { contains: query.search, mode: 'insensitive' as const } }, { slug: { contains: query.search, mode: 'insensitive' as const } }] }
+        ? {
+            OR: [
+              { title: { contains: query.search, mode: 'insensitive' as const } },
+              { slug: { contains: query.search, mode: 'insensitive' as const } },
+            ],
+          }
         : {}),
     };
 
@@ -34,7 +38,12 @@ export async function GET(request: Request, { params }: { params: { siteId: stri
 
     return Response.json({
       data,
-      meta: { total, page: query.page, limit: query.limit, totalPages: Math.ceil(total / query.limit) },
+      meta: {
+        total,
+        page: query.page,
+        limit: query.limit,
+        totalPages: Math.ceil(total / query.limit),
+      },
     });
   } catch {
     return jsonError('Unable to load posts', 404);
