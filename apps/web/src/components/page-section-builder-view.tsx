@@ -6,9 +6,10 @@ import { useDemo } from '../lib/demo-context';
 import type { PageItem } from '../lib/types';
 import { ReusableSections } from './reusable-sections';
 import { SectionBuilder } from './section-builder';
+import { VersionHistory } from './version-history';
 
 export function PageSectionBuilderView({ id }: { id: string }) {
-  const { state, patchPage } = useDemo();
+  const { state, patchPage, currentSite, refreshData } = useDemo();
   const page = state.pages.find((item) => item.id === id);
 
   if (!page) {
@@ -55,7 +56,7 @@ export function PageSectionBuilderView({ id }: { id: string }) {
           </Link>
           <span className="eyebrow" style={{ display: 'block', marginTop: 12 }}>Visual builder</span>
           <h2 style={{ marginBottom: 6 }}>{page.title}</h2>
-          <p>Add ready-made blocks, reuse saved layouts and drag content into the order you want.</p>
+          <p>Add ready-made blocks, reuse saved layouts, save versions and drag content into the order you want.</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <a href={publicUrl} target="_blank" rel="noopener noreferrer" className="btn btn-secondary">
@@ -74,6 +75,11 @@ export function PageSectionBuilderView({ id }: { id: string }) {
         <div>
           <SectionBuilder editor={editorLike} />
           <ReusableSections getNodes={getNodes} onInsert={insertReusable} />
+          {currentSite && (
+            <div style={{ marginTop: 14 }}>
+              <VersionHistory siteId={currentSite.id} pageId={id} onRestored={refreshData} />
+            </div>
+          )}
         </div>
         <div className="card" style={{ padding: 0, overflow: 'hidden', minHeight: 660 }}>
           <div style={{ padding: '12px 16px', borderBottom: '1px solid #e5ebe8', fontSize: 12, fontWeight: 800, color: '#53615c' }}>
