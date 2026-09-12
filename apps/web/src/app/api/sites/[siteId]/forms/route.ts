@@ -53,11 +53,15 @@ export async function POST(request: Request, { params }: { params: { siteId: str
       ? (site.themeConfig as Record<string, unknown>)
       : {};
     const forms = readForms(site.themeConfig);
+    if (forms.some((item) => item.type === type)) {
+      return jsonError(`A ${type} form already exists for this site.`, 409);
+    }
+
     const form: SiteForm = {
       id: crypto.randomUUID(),
       type,
       title: String(body.title || (type === 'newsletter' ? 'Join our newsletter' : type === 'booking' ? 'Book an enquiry' : 'Contact us')).slice(0, 100),
-      pageSlug: String(body.pageSlug || 'contact').replace(/^\/+|\/+$/g, '').slice(0, 80) || 'contact',
+      pageSlug: String(body.pageSlug || (type === 'newsletter' ? 'newsletter' : type === 'booking' ? 'booking' : 'contact')).replace(/^\/+|\/+$/g, '').slice(0, 80) || 'contact',
       enabled: body.enabled !== false,
     };
 
@@ -101,17 +105,29 @@ export async function PATCH(request: Request, { params }: { params: { siteId: st
       ? (site.themeConfig as Record<string, unknown>)
       : {};
     const forms = readForms(site.themeConfig);
+    const currentForm = forms.find((form) => form.id === body.id);
+    if (!currentForm) return jsonError('Form not found', 404);
     const next = forms.map((form) =>
       form.id === body.id
         ? {
             ...form,
             ...(body.title !== undefined ? { title: String(body.title).slice(0, 100) } : {}),
-            ...(body.pageSlug !== undefined ? { pageSlug: String(body.pageSlug).replace(/^\/+|\/+$/g, '').slice(0, 80) } : {}),
             ...(body.enabled !== undefined ? { enabled: Boolean(body.enabled) } : {}),
           }
         : form,
     );
-    await prisma.site.update({ where: { id: site.id }, data: { themeConfig: { ...current, forms: next } } });
+    const updatedForm = next.find((form) => form.id === body.id)!;
+    await prisma.$transaction(async (tx) => {
+      await tx.site.update({ where: { id: site.id }, data: { themeConfig: { ...current, forms: next } } });
+      await tx.page.updateMany({
+        where: { siteId: site.id, slug: updatedForm.pageSlug },
+        data: {
+          title: updatedForm.title,
+          status: updatedForm.enabled ? 'PUBLISHED' : 'DRAFT',
+          publishedAt: updatedForm.enabled ? new Date() : null,
+        },
+      });
+    });
     return Response.json({ forms: next });
   } catch {
     return jsonError('Unable to update form', 400);
@@ -127,8 +143,17 @@ export async function DELETE(request: Request, { params }: { params: { siteId: s
     const current = site.themeConfig && typeof site.themeConfig === 'object'
       ? (site.themeConfig as Record<string, unknown>)
       : {};
-    const forms = readForms(site.themeConfig).filter((form) => form.id !== id);
-    await prisma.site.update({ where: { id: site.id }, data: { themeConfig: { ...current, forms } } });
+    const allForms = readForms(site.themeConfig);
+    const removed = allForms.find((form) => form.id === id);
+    if (!removed) return jsonError('Form not found', 404);
+    const forms = allForms.filter((form) => form.id !== id);
+    await prisma.$transaction(async (tx) => {
+      await tx.site.update({ where: { id: site.id }, data: { themeConfig: { ...current, forms } } });
+      await tx.page.updateMany({
+        where: { siteId: site.id, slug: removed.pageSlug },
+        data: { status: 'DRAFT', publishedAt: null },
+      });
+    });
     return new Response(null, { status: 204 });
   } catch {
     return jsonError('Unable to delete form', 400);
