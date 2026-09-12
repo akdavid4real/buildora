@@ -6,13 +6,17 @@ export async function GET(request: Request, { params }: { params: { siteId: stri
   try {
     await assertOwnedSite(params.siteId);
     const url = new URL(request.url);
-    const parsed = pageListQuerySchema.safeParse(Object.fromEntries(url.searchParams));
-    const query = parsed.success ? parsed.data : { page: 1, limit: 20 };
+    const query = pageListQuerySchema.parse(Object.fromEntries(url.searchParams));
     const where = {
       siteId: params.siteId,
       ...(query.status ? { status: query.status } : {}),
       ...(query.search
-        ? { OR: [{ title: { contains: query.search, mode: 'insensitive' as const } }, { slug: { contains: query.search, mode: 'insensitive' as const } }] }
+        ? {
+            OR: [
+              { title: { contains: query.search, mode: 'insensitive' as const } },
+              { slug: { contains: query.search, mode: 'insensitive' as const } },
+            ],
+          }
         : {}),
     };
     const [data, total] = await Promise.all([
@@ -26,7 +30,12 @@ export async function GET(request: Request, { params }: { params: { siteId: stri
     ]);
     return Response.json({
       data,
-      meta: { total, page: query.page, limit: query.limit, totalPages: Math.ceil(total / query.limit) },
+      meta: {
+        total,
+        page: query.page,
+        limit: query.limit,
+        totalPages: Math.ceil(total / query.limit),
+      },
     });
   } catch {
     return jsonError('Unable to load pages', 404);
@@ -41,7 +50,10 @@ export async function POST(request: Request, { params }: { params: { siteId: str
 
     const page = await prisma.$transaction(async (tx) => {
       if (parsed.data.isHomepage) {
-        await tx.page.updateMany({ where: { siteId: params.siteId, isHomepage: true }, data: { isHomepage: false } });
+        await tx.page.updateMany({
+          where: { siteId: params.siteId, isHomepage: true },
+          data: { isHomepage: false },
+        });
       }
       return tx.page.create({
         data: {
