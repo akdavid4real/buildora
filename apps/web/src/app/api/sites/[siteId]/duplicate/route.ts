@@ -29,10 +29,11 @@ export async function POST(_: Request, { params }: { params: { siteId: string } 
             title: page.title,
             slug: page.slug,
             contentJson: page.contentJson,
-            status: 'DRAFT',
+            status: page.status,
             isHomepage: page.isHomepage,
             seoTitle: page.seoTitle,
             seoDescription: page.seoDescription,
+            publishedAt: page.status === 'PUBLISHED' ? page.publishedAt ?? new Date() : null,
           },
         });
       }
@@ -45,9 +46,10 @@ export async function POST(_: Request, { params }: { params: { siteId: string } 
             slug: post.slug,
             excerpt: post.excerpt,
             contentJson: post.contentJson,
-            status: 'DRAFT',
+            status: post.status,
             seoTitle: post.seoTitle,
             seoDescription: post.seoDescription,
+            publishedAt: post.status === 'PUBLISHED' ? post.publishedAt ?? new Date() : null,
           },
         });
       }
