@@ -1,5 +1,5 @@
 import { prisma } from '@buildora/database';
-import { assertOwnedSite, jsonError } from '../../../../../../server/hackathon';
+import { assertOwnedSite, jsonError } from '../../../../../server/hackathon';
 
 function doc(title: string, sections: Array<{ heading?: string; body: string }>) {
   return {
