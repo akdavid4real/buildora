@@ -1,5 +1,5 @@
 import { prisma } from '@buildora/database';
-import { assertOwnedSite, jsonError } from '../../../../../../server/hackathon';
+import { assertOwnedSite, jsonError } from '../../../../../server/hackathon';
 
 export async function POST(_: Request, { params }: { params: { siteId: string } }) {
   try {
