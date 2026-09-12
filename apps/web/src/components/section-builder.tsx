@@ -1,7 +1,7 @@
 'use client';
 
 import { GripVertical, Plus } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 
 type EditorLike = {
   getJSON: () => { type?: string; content?: Array<Record<string, unknown>> };
@@ -104,7 +104,7 @@ const SECTION_LIBRARY = [
 ] as const;
 
 function nodeLabel(node: Record<string, unknown>, index: number) {
-  const content = Array.isArray(node.content) ? node.content as Array<Record<string, unknown>> : [];
+  const content = Array.isArray(node.content) ? (node.content as Array<Record<string, unknown>>) : [];
   const firstText = content.find((item) => typeof item.text === 'string')?.text;
   if (typeof firstText === 'string' && firstText.trim()) return firstText.slice(0, 54);
   const type = typeof node.type === 'string' ? node.type : 'section';
@@ -119,7 +119,6 @@ export function SectionBuilder({
   onChanged?: () => void;
 }) {
   const [dragIndex, setDragIndex] = useState<number | null>(null);
-  const nodes = useMemo(() => editor?.getJSON().content ?? [], [editor, editor?.getJSON().content?.length]);
 
   const setNodes = (nextNodes: Array<Record<string, unknown>>) => {
     if (!editor) return;
