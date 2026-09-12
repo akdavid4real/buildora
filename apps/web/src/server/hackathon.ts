@@ -101,11 +101,23 @@ async function initializeSchema() {
       metadata TEXT NOT NULL DEFAULT '{}',
       createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
     )`,
+    `CREATE TABLE IF NOT EXISTS page_versions (
+      id TEXT PRIMARY KEY NOT NULL,
+      pageId TEXT NOT NULL,
+      siteId TEXT NOT NULL,
+      title TEXT NOT NULL,
+      slug TEXT NOT NULL,
+      contentJson TEXT NOT NULL,
+      seoTitle TEXT,
+      seoDescription TEXT,
+      createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`,
     `CREATE INDEX IF NOT EXISTS sites_ownerId_idx ON sites(ownerId)`,
     `CREATE INDEX IF NOT EXISTS pages_siteId_status_idx ON pages(siteId, status)`,
     `CREATE INDEX IF NOT EXISTS pages_siteId_isHomepage_idx ON pages(siteId, isHomepage)`,
     `CREATE INDEX IF NOT EXISTS posts_siteId_status_publishedAt_idx ON posts(siteId, status, publishedAt)`,
     `CREATE INDEX IF NOT EXISTS media_assets_siteId_idx ON media_assets(siteId)`,
+    `CREATE INDEX IF NOT EXISTS page_versions_pageId_createdAt_idx ON page_versions(pageId, createdAt DESC)`,
   ];
 
   for (const statement of statements) {
