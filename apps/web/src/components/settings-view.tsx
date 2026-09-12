@@ -1,6 +1,6 @@
 'use client';
 
-import { FormInput, Plug, Save } from 'lucide-react';
+import { FormInput, Globe2, Plug, Save } from 'lucide-react';
 import Link from 'next/link';
 import React from 'react';
 import { useDemo } from '../lib/demo-context';
@@ -72,6 +72,10 @@ export function SettingsView() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: 16, marginTop: 18 }}>
+        <Link href="/dashboard/sites" className="card" style={{ textDecoration: 'none', color: 'inherit' }}>
+          <div className="panel-title"><Globe2 size={17} /> Websites</div>
+          <p style={{ marginBottom: 0, color: '#6f7c77' }}>Create and switch between multiple Buildora websites.</p>
+        </Link>
         <Link href="/dashboard/forms" className="card" style={{ textDecoration: 'none', color: 'inherit' }}>
           <div className="panel-title"><FormInput size={17} /> Forms & submissions</div>
           <p style={{ marginBottom: 0, color: '#6f7c77' }}>Build contact, newsletter and booking forms and review responses.</p>
