@@ -33,6 +33,50 @@ function extractContentHtml(item?: { content?: string; contentJson?: Record<stri
   return '';
 }
 
+function themeClassFor(themeId: DemoStoreState['site']['themeId']) {
+  if (themeId === 'minimal-blog') return '';
+  if (themeId === 'small-business') return 'business';
+  if (themeId === 'personal-portfolio') return 'portfolio';
+  return themeId;
+}
+
+const EXTRA_THEME_STYLES = `
+.public.agency { background:#0b1020; color:#f8fafc; }
+.public.agency .public-header { background:#0f172a; border-color:#ffffff18; }
+.public.agency .public-main { width:min(1080px,calc(100% - 40px)); }
+.public.agency .public-main h1 { font-family:Inter,ui-sans-serif,sans-serif; font-weight:900; text-transform:uppercase; color:white; }
+.public.agency .public-main h2,.public.agency .public-main p,.public.agency .public-main li { color:#d7e0ee; }
+.public.agency .public-post { background:#111827; border-color:#263244; }
+
+.public.restaurant { background:#241712; color:#fff4e6; }
+.public.restaurant .public-header { background:#2f1f18; border-color:#ffffff18; }
+.public.restaurant .public-main { width:min(860px,calc(100% - 40px)); }
+.public.restaurant .public-main h1,.public.restaurant .public-main h2 { color:#f6d7aa; font-family:Georgia,serif; }
+.public.restaurant .public-main p,.public.restaurant .public-main li { color:#ead9c8; }
+.public.restaurant .public-post { background:#33231b; border-color:#5a3d2e; }
+
+.public.saas { background:linear-gradient(180deg,#eef4ff 0%,#ffffff 42%); color:#172554; }
+.public.saas .public-header { background:rgba(255,255,255,.86); backdrop-filter:blur(12px); }
+.public.saas .public-main { width:min(1040px,calc(100% - 40px)); }
+.public.saas .public-main h1 { font-family:Inter,ui-sans-serif,sans-serif; color:#1d4ed8; font-weight:900; }
+.public.saas .public-main h2 { color:#1e3a8a; }
+.public.saas .public-post { box-shadow:0 16px 40px rgba(37,99,235,.08); border-color:#dbe7ff; }
+
+.public.event { background:linear-gradient(155deg,#2e1065 0%,#6b21a8 55%,#a21caf 100%); color:#fff; }
+.public.event .public-header { background:#ffffff0d; border-color:#ffffff24; }
+.public.event .public-main { width:min(980px,calc(100% - 40px)); }
+.public.event .public-main h1 { color:#fff; font-family:Inter,ui-sans-serif,sans-serif; font-weight:950; }
+.public.event .public-main h2,.public.event .public-main p,.public.event .public-main li { color:#f5e9ff; }
+.public.event .public-post { background:#ffffff12; border-color:#ffffff26; color:white; }
+
+.public.personal-brand { background:linear-gradient(180deg,#fff1f2,#fff7ed); color:#4c0519; }
+.public.personal-brand .public-header { background:#fff8f5cc; backdrop-filter:blur(10px); }
+.public.personal-brand .public-main { width:min(900px,calc(100% - 40px)); }
+.public.personal-brand .public-main h1 { color:#9f1239; font-family:Georgia,serif; }
+.public.personal-brand .public-main h2 { color:#be123c; }
+.public.personal-brand .public-post { border-color:#fecdd3; box-shadow:0 12px 30px rgba(190,18,60,.06); }
+`;
+
 export function PublicSite({ slug, path }: { slug: string; path: string[] }) {
   const [state, setState] = useState<DemoStoreState>(INITIAL_DEMO_STATE);
   const [ready, setReady] = useState(false);
@@ -152,10 +196,11 @@ export function PublicSite({ slug, path }: { slug: string; path: string[] }) {
 
   if (!ready) return null;
 
-  const themeClass = state.site.themeId === 'minimal-blog' ? '' : state.site.themeId;
+  const themeClass = themeClassFor(state.site.themeId);
 
   return (
     <div className={`public ${themeClass}`} style={{ '--green': state.site.accentColor } as React.CSSProperties}>
+      <style>{EXTRA_THEME_STYLES}</style>
       <header className="public-header">
         <Link href={root} className="brand">
           <span className="brand-mark">B</span>
