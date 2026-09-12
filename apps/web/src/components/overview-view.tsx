@@ -51,7 +51,7 @@ export function OverviewView() {
       if (!response.ok) throw new Error(payload?.message || 'Unable to duplicate site');
       await refreshData();
       showNotice(`Created ${payload.name}`);
-      if (payload?.slug) window.open(`/site/${payload.slug}`, '_blank', 'noopener,noreferrer');
+      router.push('/dashboard/sites');
     } catch (error) {
       showNotice(error instanceof Error ? error.message : 'Unable to duplicate site');
     }
@@ -144,6 +144,7 @@ export function OverviewView() {
         <div className="card">
           <h3>Quick actions</h3>
           <div className="quick">
+            <Link href="/dashboard/sites" style={{ textDecoration: 'none' }} className="btn btn-secondary"><Globe2 size={18} /> Websites</Link>
             <Link href="/dashboard/pages" style={{ textDecoration: 'none' }} className="btn btn-secondary"><FileText size={18} /> Pages</Link>
             <Link href="/dashboard/posts" style={{ textDecoration: 'none' }} className="btn btn-secondary"><BookOpen size={18} /> Blog posts</Link>
             <Link href="/dashboard/media" style={{ textDecoration: 'none' }} className="btn btn-secondary"><Upload size={18} /> Media</Link>
