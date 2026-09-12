@@ -9,13 +9,14 @@ import {
   Plus,
   Sparkles,
   Upload,
+  WandSparkles,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useDemo } from '../lib/demo-context';
 
 export function OverviewView() {
-  const { state, createPage } = useDemo();
+  const { state, createPage, isApiMode } = useDemo();
   const router = useRouter();
 
   const published =
@@ -32,11 +33,9 @@ export function OverviewView() {
   const handleCreateContent = async () => {
     try {
       const id = await createPage();
-      if (id) {
-        router.push(`/dashboard/pages/${id}`);
-      }
+      if (id) router.push(`/dashboard/pages/${id}`);
     } catch {
-      // Creation failed on API; remain on overview view
+      // Creation failed; remain on overview view.
     }
   };
 
@@ -45,13 +44,17 @@ export function OverviewView() {
       <div className="hero-row">
         <div>
           <span className="eyebrow">Site overview</span>
-          <h2>Good afternoon, Alex.</h2>
-          <p>Your website is live and looking healthy.</p>
+          <h2>{state.site.siteName}</h2>
+          <p>{state.site.tagline || 'Your website is ready to build and publish.'}</p>
         </div>
-        <button className="btn btn-primary" onClick={handleCreateContent}>
-          <Plus size={16} />
-          Create content
-        </button>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <Link href="/onboarding" className="btn btn-secondary" style={{ textDecoration: 'none' }}>
+            <WandSparkles size={16} /> Set up site
+          </Link>
+          <button className="btn btn-primary" onClick={handleCreateContent}>
+            <Plus size={16} /> Create content
+          </button>
+        </div>
       </div>
 
       <section className="stats">
@@ -85,9 +88,7 @@ export function OverviewView() {
                 >
                   <div>
                     <strong>{item.title}</strong>
-                    <small>
-                      {isPost ? 'Blog post' : 'Page'} · {item.status.toLowerCase()}
-                    </small>
+                    <small>{isPost ? 'Blog post' : 'Page'} · {item.status.toLowerCase()}</small>
                   </div>
                   <span className={`badge ${item.status === 'DRAFT' ? 'draft' : ''}`}>
                     {item.status}
@@ -101,47 +102,28 @@ export function OverviewView() {
         <div className="card">
           <h3>Quick actions</h3>
           <div className="quick">
-            <Link
-              href="/dashboard/pages"
-              style={{ textDecoration: 'none' }}
-              className="btn btn-secondary"
-            >
-              <FileText size={18} />
-              Pages
+            <Link href="/dashboard/pages" style={{ textDecoration: 'none' }} className="btn btn-secondary">
+              <FileText size={18} /> Pages
             </Link>
-            <Link
-              href="/dashboard/posts"
-              style={{ textDecoration: 'none' }}
-              className="btn btn-secondary"
-            >
-              <BookOpen size={18} />
-              Blog posts
+            <Link href="/dashboard/posts" style={{ textDecoration: 'none' }} className="btn btn-secondary">
+              <BookOpen size={18} /> Blog posts
             </Link>
-            <Link
-              href="/dashboard/media"
-              style={{ textDecoration: 'none' }}
-              className="btn btn-secondary"
-            >
-              <Upload size={18} />
-              Media
+            <Link href="/dashboard/media" style={{ textDecoration: 'none' }} className="btn btn-secondary">
+              <Upload size={18} /> Media
             </Link>
-            <Link
-              href="/dashboard/appearance"
-              style={{ textDecoration: 'none' }}
-              className="btn btn-secondary"
-            >
-              <Palette size={18} />
-              Themes
+            <Link href="/dashboard/appearance" style={{ textDecoration: 'none' }} className="btn btn-secondary">
+              <Palette size={18} /> Themes
             </Link>
           </div>
           <div className="ai-card" style={{ marginTop: 16, marginBottom: 0 }}>
             <div className="panel-title">
               <Sparkles size={17} />
-              Demo mode enabled
+              {isApiMode ? 'Connected workspace' : 'Offline demo mode'}
             </div>
             <p>
-              Everything is stored locally in this browser, so your presentation works without a
-              server or API key.
+              {isApiMode
+                ? 'Pages, posts, media and AI actions are connected to the Buildora backend.'
+                : 'Local demo mode keeps the interface usable without a database connection.'}
             </p>
           </div>
         </div>
