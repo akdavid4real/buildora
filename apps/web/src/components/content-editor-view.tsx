@@ -19,9 +19,10 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import { aiApi } from '../lib/ai-client';
 import { useDemo } from '../lib/demo-context';
 import type { PageItem, PostItem } from '../lib/types';
 
@@ -34,8 +35,9 @@ const slugify = (value: string) =>
 
 export function ContentEditorView({ kind, id }: { kind: 'pages' | 'posts'; id: string }) {
   const isPages = kind === 'pages';
-  const { state, patchPage, patchPost, deletePage, deletePost } = useDemo();
+  const { state, patchPage, patchPost, deletePage, deletePost, currentSite, showNotice } = useDemo();
   const router = useRouter();
+  const [aiLoading, setAiLoading] = useState<string | null>(null);
 
   const collection = isPages ? state.pages : state.posts;
   const item = collection.find((i) => i.id === id);
@@ -121,6 +123,59 @@ export function ContentEditorView({ kind, id }: { kind: 'pages' | 'posts'; id: s
     }
   };
 
+  const getAiContext = () => {
+    const html = editor?.getText() || item.content || '';
+    return `${item.title}\n\n${html}`.trim();
+  };
+
+  const runAi = async (actionType: 'TITLE' | 'DRAFT' | 'SEO_METADATA') => {
+    if (!currentSite) {
+      showNotice('Open a connected site to use AI.');
+      return;
+    }
+
+    setAiLoading(actionType);
+    try {
+      const response = await aiApi.generate(currentSite.id, {
+        actionType,
+        context: getAiContext() || item.title,
+        targetEntity: isPages ? 'PAGE' : 'POST',
+      });
+
+      if (actionType === 'TITLE') {
+        const firstTitle = response.suggestion
+          .split('\n')
+          .map((line) => line.replace(/^\s*\d+[.)-]?\s*/, '').trim())
+          .find(Boolean);
+        if (firstTitle) {
+          patch({ title: firstTitle, slug: slugify(firstTitle) }, 'AI title generated');
+        }
+      } else if (actionType === 'DRAFT') {
+        if (editor) {
+          editor.commands.setContent(response.suggestion);
+          patch(
+            { content: editor.getHTML(), contentJson: editor.getJSON() },
+            'AI draft generated',
+          );
+        }
+      } else {
+        const titleMatch = response.suggestion.match(/SEO Title:\s*(.+)/i);
+        const descriptionMatch = response.suggestion.match(/SEO Description:\s*(.+)/i);
+        patch(
+          {
+            seoTitle: titleMatch?.[1]?.trim() || item.seoTitle,
+            seoDescription: descriptionMatch?.[1]?.trim() || item.seoDescription,
+          },
+          'AI SEO details generated',
+        );
+      }
+    } catch (error) {
+      showNotice(error instanceof Error ? error.message : 'AI generation failed');
+    } finally {
+      setAiLoading(null);
+    }
+  };
+
   const publicUrl = isPages
     ? `/site/${state.site.siteSlug}${item.slug ? `/${item.slug}` : ''}`
     : `/site/${state.site.siteSlug}/blog/${item.slug}`;
@@ -167,7 +222,6 @@ export function ContentEditorView({ kind, id }: { kind: 'pages' | 'posts'; id: s
       </div>
 
       <div className="editor-columns">
-        {/* Main wide column */}
         <div className="editor-card">
           <div style={{ marginBottom: 18 }}>
             <label
@@ -189,8 +243,7 @@ export function ContentEditorView({ kind, id }: { kind: 'pages' | 'posts'; id: s
               placeholder="Enter title..."
               onChange={(e) => {
                 const newTitle = e.target.value;
-                const newSlug = slugify(newTitle);
-                patch({ title: newTitle, slug: newSlug });
+                patch({ title: newTitle, slug: slugify(newTitle) });
               }}
             />
           </div>
@@ -206,93 +259,32 @@ export function ContentEditorView({ kind, id }: { kind: 'pages' | 'posts'; id: s
           </div>
 
           <div className="toolbar" aria-label="Text formatting">
-            <button
-              type="button"
-              onClick={() => editor?.chain().focus().toggleBold().run()}
-              className={editor?.isActive('bold') ? 'active' : ''}
-              disabled={!editor}
-              title="Bold"
-            >
-              <Bold size={14} />
-              <span>Bold</span>
+            <button type="button" onClick={() => editor?.chain().focus().toggleBold().run()} className={editor?.isActive('bold') ? 'active' : ''} disabled={!editor} title="Bold">
+              <Bold size={14} /><span>Bold</span>
             </button>
-            <button
-              type="button"
-              onClick={() => editor?.chain().focus().toggleItalic().run()}
-              className={editor?.isActive('italic') ? 'active' : ''}
-              disabled={!editor}
-              title="Italic"
-            >
-              <Italic size={14} />
-              <span>Italic</span>
+            <button type="button" onClick={() => editor?.chain().focus().toggleItalic().run()} className={editor?.isActive('italic') ? 'active' : ''} disabled={!editor} title="Italic">
+              <Italic size={14} /><span>Italic</span>
             </button>
-            <button
-              type="button"
-              onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
-              className={editor?.isActive('heading', { level: 2 }) ? 'active' : ''}
-              disabled={!editor}
-              title="Heading 2"
-            >
-              <Heading2 size={15} />
-              <span>H2</span>
+            <button type="button" onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()} className={editor?.isActive('heading', { level: 2 }) ? 'active' : ''} disabled={!editor} title="Heading 2">
+              <Heading2 size={15} /><span>H2</span>
             </button>
-            <button
-              type="button"
-              onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}
-              className={editor?.isActive('heading', { level: 3 }) ? 'active' : ''}
-              disabled={!editor}
-              title="Heading 3"
-            >
-              <Heading3 size={15} />
-              <span>H3</span>
+            <button type="button" onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()} className={editor?.isActive('heading', { level: 3 }) ? 'active' : ''} disabled={!editor} title="Heading 3">
+              <Heading3 size={15} /><span>H3</span>
             </button>
-            <button
-              type="button"
-              onClick={() => editor?.chain().focus().toggleBulletList().run()}
-              className={editor?.isActive('bulletList') ? 'active' : ''}
-              disabled={!editor}
-              title="Bullet List"
-            >
-              <List size={15} />
-              <span>Bullet list</span>
+            <button type="button" onClick={() => editor?.chain().focus().toggleBulletList().run()} className={editor?.isActive('bulletList') ? 'active' : ''} disabled={!editor} title="Bullet List">
+              <List size={15} /><span>Bullet list</span>
             </button>
-            <button
-              type="button"
-              onClick={() => editor?.chain().focus().toggleOrderedList().run()}
-              className={editor?.isActive('orderedList') ? 'active' : ''}
-              disabled={!editor}
-              title="Numbered List"
-            >
-              <ListOrdered size={15} />
-              <span>Numbered list</span>
+            <button type="button" onClick={() => editor?.chain().focus().toggleOrderedList().run()} className={editor?.isActive('orderedList') ? 'active' : ''} disabled={!editor} title="Numbered List">
+              <ListOrdered size={15} /><span>Numbered list</span>
             </button>
-            <button
-              type="button"
-              onClick={() => editor?.chain().focus().toggleBlockquote().run()}
-              className={editor?.isActive('blockquote') ? 'active' : ''}
-              disabled={!editor}
-              title="Blockquote"
-            >
-              <Quote size={14} />
-              <span>Quote</span>
+            <button type="button" onClick={() => editor?.chain().focus().toggleBlockquote().run()} className={editor?.isActive('blockquote') ? 'active' : ''} disabled={!editor} title="Blockquote">
+              <Quote size={14} /><span>Quote</span>
             </button>
-            <button
-              type="button"
-              onClick={() => editor?.chain().focus().undo().run()}
-              disabled={!editor?.can().undo()}
-              title="Undo"
-            >
-              <Undo2 size={14} />
-              <span>Undo</span>
+            <button type="button" onClick={() => editor?.chain().focus().undo().run()} disabled={!editor?.can().undo()} title="Undo">
+              <Undo2 size={14} /><span>Undo</span>
             </button>
-            <button
-              type="button"
-              onClick={() => editor?.chain().focus().redo().run()}
-              disabled={!editor?.can().redo()}
-              title="Redo"
-            >
-              <Redo2 size={14} />
-              <span>Redo</span>
+            <button type="button" onClick={() => editor?.chain().focus().redo().run()} disabled={!editor?.can().redo()} title="Redo">
+              <Redo2 size={14} /><span>Redo</span>
             </button>
           </div>
 
@@ -301,67 +293,25 @@ export function ContentEditorView({ kind, id }: { kind: 'pages' | 'posts'; id: s
           </div>
         </div>
 
-        {/* Right side inspector panel */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
           <div className="ai-card" style={{ margin: 0 }}>
             <div className="panel-title">
               <WandSparkles size={17} />
               AI writing assistant
             </div>
-            <span className="badge">Demo ready</span>
+            <span className="badge">Mistral AI</span>
             <p style={{ marginTop: 8 }}>
-              Quickly generate draft headlines, copy or SEO tags for this content.
+              Generate titles, full drafts, and SEO metadata from the content you are editing.
             </p>
             <div className="ai-actions">
-              <button
-                type="button"
-                onClick={() => {
-                  const newTitle = isPages
-                    ? 'A Better Way to Build Your Online Presence'
-                    : '5 Simple Ways AI Makes Content Better';
-                  patch(
-                    {
-                      title: newTitle,
-                      slug: slugify(newTitle),
-                    },
-                    'AI title generated',
-                  );
-                }}
-              >
-                ✨ Generate a title
+              <button type="button" disabled={Boolean(aiLoading)} onClick={() => runAi('TITLE')}>
+                {aiLoading === 'TITLE' ? 'Generating…' : '✨ Generate a title'}
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const draftContent = `<h1>${item.title}</h1><p>Great ideas deserve a simple way to reach the world. Buildora brings your story, services, and personality together in one clear, beautiful experience.</p><h2>Designed around what matters</h2><p>We remove the busywork so you can focus on useful content, genuine connections, and growing your audience.</p><ul><li>Clear messaging that earns attention</li><li>Fast, accessible experiences</li><li>Simple tools your whole team can use</li></ul>`;
-                  if (editor) {
-                    editor.commands.setContent(draftContent);
-                    patch(
-                      {
-                        content: editor.getHTML(),
-                        contentJson: editor.getJSON(),
-                      },
-                      'Demo draft generated',
-                    );
-                  }
-                }}
-              >
-                ✨ Generate first draft
+              <button type="button" disabled={Boolean(aiLoading)} onClick={() => runAi('DRAFT')}>
+                {aiLoading === 'DRAFT' ? 'Generating…' : '✨ Generate first draft'}
               </button>
-              <button
-                type="button"
-                onClick={() =>
-                  patch(
-                    {
-                      seoTitle: `${item.title} | ${state.site.siteName}`,
-                      seoDescription:
-                        'Discover a simpler, faster way to build a beautiful online presence with practical tools and AI assistance.',
-                    },
-                    'SEO copy generated',
-                  )
-                }
-              >
-                ✨ Generate SEO details
+              <button type="button" disabled={Boolean(aiLoading)} onClick={() => runAi('SEO_METADATA')}>
+                {aiLoading === 'SEO_METADATA' ? 'Generating…' : '✨ Generate SEO details'}
               </button>
             </div>
           </div>
@@ -393,6 +343,37 @@ export function ContentEditorView({ kind, id }: { kind: 'pages' | 'posts'; id: s
             <div className="card" style={{ padding: 22 }}>
               <h3 style={{ fontSize: 15, marginBottom: 14 }}>Post Details</h3>
               <div className="field">
+                <label>Cover image</label>
+                <select
+                  className="input"
+                  value={(item as PostItem).coverImageId ?? ''}
+                  onChange={(e) => {
+                    const media = state.media.find((asset) => asset.id === e.target.value);
+                    patch(
+                      {
+                        coverImageId: e.target.value || null,
+                        coverImageUrl: media?.url ?? null,
+                      },
+                      media ? 'Cover image selected' : 'Cover image removed',
+                    );
+                  }}
+                >
+                  <option value="">No cover image</option>
+                  {state.media.map((asset) => (
+                    <option key={asset.id} value={asset.id}>
+                      {asset.name}
+                    </option>
+                  ))}
+                </select>
+                {(item as PostItem).coverImageUrl && (
+                  <img
+                    src={(item as PostItem).coverImageUrl ?? ''}
+                    alt="Selected cover"
+                    style={{ width: '100%', borderRadius: 10, marginTop: 10, maxHeight: 150, objectFit: 'cover' }}
+                  />
+                )}
+              </div>
+              <div className="field">
                 <label>Author name</label>
                 <input
                   className="input"
@@ -417,7 +398,7 @@ export function ContentEditorView({ kind, id }: { kind: 'pages' | 'posts'; id: s
             <div className="card" style={{ padding: 20 }}>
               <h3 style={{ fontSize: 14, color: '#9e2a2b', marginBottom: 10 }}>Danger Zone</h3>
               <p style={{ fontSize: 13, color: '#6f7c77', marginBottom: 12 }}>
-                Permanently remove this {isPages ? 'page' : 'post'} from the demo store.
+                Permanently remove this {isPages ? 'page' : 'post'}.
               </p>
               <button
                 className="btn btn-danger"
