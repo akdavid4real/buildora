@@ -6,7 +6,7 @@ export async function GET() {
   const user = await getHackathonUser();
   const sites = await prisma.site.findMany({
     where: { ownerId: user.id },
-    orderBy: { createdAt: 'desc' },
+    orderBy: { updatedAt: 'desc' },
   });
   return Response.json(sites);
 }
