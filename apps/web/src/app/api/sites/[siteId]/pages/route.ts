@@ -13,8 +13,8 @@ export async function GET(request: Request, { params }: { params: { siteId: stri
       ...(query.search
         ? {
             OR: [
-              { title: { contains: query.search, mode: 'insensitive' as const } },
-              { slug: { contains: query.search, mode: 'insensitive' as const } },
+              { title: { contains: query.search } },
+              { slug: { contains: query.search } },
             ],
           }
         : {}),
