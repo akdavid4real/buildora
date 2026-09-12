@@ -1,0 +1,181 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum ContentStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum AiActionType {
+  TITLE
+  OUTLINE
+  DRAFT
+  REWRITE
+  SHORTEN
+  EXPAND
+  EXCERPT
+  SEO_METADATA
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  role         Role     @default(USER)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  refreshTokens RefreshToken[]
+  sites         Site[]
+  mediaAssets   MediaAsset[]
+  aiGenerations AiGeneration[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  tokenHash String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  familyId  String    @default(uuid())
+  isRevoked Boolean   @default(false)
+  revokedAt DateTime?
+  expiresAt DateTime
+  userAgent String?
+  ipAddress String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([familyId])
+  @@map("refresh_tokens")
+}
+
+model Site {
+  id          String   @id @default(uuid())
+  slug        String   @unique
+  name        String
+  description String?
+  ownerId     String
+  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  themeId     String   @default("minimal-blog")
+  themeConfig Json     @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  pages         Page[]
+  posts         Post[]
+  mediaAssets   MediaAsset[]
+  aiGenerations AiGeneration[]
+
+  @@index([ownerId])
+  @@map("sites")
+}
+
+model Page {
+  id             String        @id @default(uuid())
+  siteId         String
+  site           Site          @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  title          String
+  slug           String
+  /// Canonical Tiptap JSON document root: {"type":"doc","content":[]}
+  contentJson    Json          @default("{\"type\":\"doc\",\"content\":[]}")
+  status         ContentStatus @default(DRAFT)
+  /// Note: The invariant of at most one homepage per site is enforced transactionally in the service layer.
+  isHomepage     Boolean       @default(false)
+  seoTitle       String?
+  seoDescription String?
+  publishedAt    DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([siteId, slug])
+  @@index([siteId, status])
+  @@index([siteId, isHomepage])
+  @@map("pages")
+}
+
+model Post {
+  id             String        @id @default(uuid())
+  siteId         String
+  site           Site          @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  title          String
+  slug           String
+  excerpt        String?       @db.Text
+  coverImageId   String?
+  coverImage     MediaAsset?   @relation("PostCoverImage", fields: [coverImageId], references: [id], onDelete: SetNull)
+  /// Canonical Tiptap JSON document root: {"type":"doc","content":[]}
+  contentJson    Json          @default("{\"type\":\"doc\",\"content\":[]}")
+  status         ContentStatus @default(DRAFT)
+  seoTitle       String?
+  seoDescription String?
+  publishedAt    DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([siteId, slug])
+  @@index([siteId, status, publishedAt])
+  @@index([coverImageId])
+  @@map("posts")
+}
+
+model MediaAsset {
+  id               String   @id @default(uuid())
+  siteId           String
+  site             Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  uploaderId       String
+  uploader         User     @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
+  filename         String
+  originalFilename String
+  mimeType         String
+  sizeBytes        Int
+  s3Key            String   @unique
+  publicUrl        String
+  width            Int?
+  height           Int?
+  altText          String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  coverForPosts Post[] @relation("PostCoverImage")
+
+  @@index([siteId])
+  @@index([siteId, createdAt])
+  @@index([uploaderId])
+  @@map("media_assets")
+}
+
+model AiGeneration {
+  id               String       @id @default(uuid())
+  siteId           String
+  site             Site         @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  userId           String
+  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  actionType       AiActionType
+  model            String
+  promptTokens     Int          @default(0)
+  completionTokens Int          @default(0)
+  totalTokens      Int          @default(0)
+  durationMs       Int?
+  success          Boolean      @default(true)
+  errorMessage     String?
+  metadata         Json         @default("{}")
+  createdAt        DateTime     @default(now())
+
+  @@index([siteId, createdAt])
+  @@index([userId, createdAt])
+  @@map("ai_generations")
+}

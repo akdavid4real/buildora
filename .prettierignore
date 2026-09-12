@@ -1,0 +1,11 @@
+node_modules
+dist
+build
+.turbo
+.next
+coverage
+bun.lock
+bun.lockb
+package-lock.json
+*.tsbuildinfo
+postgres_data
