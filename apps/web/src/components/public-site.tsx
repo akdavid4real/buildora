@@ -233,6 +233,7 @@ export function PublicSite({ slug, path }: { slug: string; path: string[] }) {
   const whatsapp = integrations.whatsapp;
   const calendly = integrations.calendly;
   const paystack = integrations.paystack;
+  const mailchimp = integrations.mailchimp;
 
   return (
     <div className={`public ${themeClass}`} style={{ '--green': state.site.accentColor } as React.CSSProperties}>
@@ -263,6 +264,9 @@ export function PublicSite({ slug, path }: { slug: string; path: string[] }) {
         )}
         {calendly?.enabled && calendly.value && (
           <a href={calendly.value} target="_blank" rel="noopener noreferrer">Book a call</a>
+        )}
+        {mailchimp?.enabled && mailchimp.value && (
+          <a href={mailchimp.value} target="_blank" rel="noopener noreferrer">Newsletter</a>
         )}
         {paystack?.enabled && paystack.value && (
           <a href={paystack.value} target="_blank" rel="noopener noreferrer">Pay now</a>
