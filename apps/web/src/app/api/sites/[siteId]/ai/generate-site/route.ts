@@ -1,5 +1,5 @@
 import { prisma } from '@buildora/database';
-import { assertOwnedSite, getHackathonUser, jsonError } from '../../../../../../../server/hackathon';
+import { assertOwnedSite, getHackathonUser, jsonError } from '../../../../../../server/hackathon';
 
 const MODEL = process.env.MISTRAL_MODEL || 'mistral-small-latest';
 const THEME_IDS = [
