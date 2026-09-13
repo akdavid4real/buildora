@@ -1,4 +1,5 @@
 import { prisma } from '@buildora/database';
+import { ensureCommerceSchema } from '../../../../../../server/commerce';
 import { assertOwnedSite, getHackathonUser, jsonError } from '../../../../../../server/hackathon';
 
 const MODEL = process.env.MISTRAL_MODEL || 'mistral-small-latest';
@@ -69,16 +70,16 @@ export async function POST(request: Request, { params }: { params: { siteId: str
       body: JSON.stringify({
         model: MODEL,
         temperature: 0.65,
-        max_tokens: 2600,
+        max_tokens: 3000,
         messages: [
           {
             role: 'system',
             content:
-              `You are Buildora, an expert website strategist. Return ONLY valid JSON with no markdown. Create concise, polished website copy. Theme must be one of ${THEME_IDS.join(', ')}. Pick the theme that best matches the business and audience. Decide whether the business primarily sells PRODUCTS or SERVICES and generate the offer section accordingly.`,
+              `You are Buildora, an expert website strategist. Return ONLY valid JSON with no markdown. Create concise, polished website copy. Theme must be one of ${THEME_IDS.join(', ')}. Pick the theme that best matches the business and audience. Decide whether the business primarily sells PRODUCTS or SERVICES and generate the offer section accordingly. For product businesses, also create realistic starter products with prices in Nigerian naira and sensible demo stock.`,
           },
           {
             role: 'user',
-            content: `Create a starter website from this description:\n${description}\n\nReturn exactly this JSON shape:\n{\n  "siteName": "...",\n  "tagline": "...",\n  "themeId": "small-business",\n  "accentColor": "#174d3e",\n  "seoTitle": "...",\n  "seoDescription": "...",\n  "home": {"title":"Home","headline":"...","body":["...","..."],"cta":"..."},\n  "about": {"title":"About","body":["...","..."]},\n  "offerType": "products",\n  "offers": {"title":"Products","items":[{"name":"...","body":"..."},{"name":"...","body":"..."},{"name":"...","body":"..."}]},\n  "blogIdeas": ["...","...","..."]\n}\n\nUse offerType "products" for retail/product businesses and "services" for service businesses.`,
+            content: `Create a starter website from this description:\n${description}\n\nReturn exactly this JSON shape:\n{\n  "siteName": "...",\n  "tagline": "...",\n  "themeId": "small-business",\n  "accentColor": "#174d3e",\n  "seoTitle": "...",\n  "seoDescription": "...",\n  "home": {"title":"Home","headline":"...","body":["...","..."],"cta":"..."},\n  "about": {"title":"About","body":["...","..."]},\n  "offerType": "products",\n  "offers": {"title":"Products","items":[{"name":"...","body":"..."},{"name":"...","body":"..."},{"name":"...","body":"..."}]},\n  "products": [{"name":"...","description":"...","priceNgn":15000,"stock":12},{"name":"...","description":"...","priceNgn":22000,"stock":8},{"name":"...","description":"...","priceNgn":12000,"stock":15}],\n  "blogIdeas": ["...","...","..."]\n}\n\nUse offerType "products" for retail/product businesses and "services" for service businesses. For services, return products as an empty array.`,
           },
         ],
       }),
@@ -139,6 +140,29 @@ export async function POST(request: Request, { params }: { params: { siteId: str
         ];
     const finalOffers = offerItems.length ? offerItems : fallbackOffers;
 
+    const starterProducts = offerType === 'products'
+      ? (Array.isArray(generated.products) ? generated.products : [])
+          .map((item: any, index: number) => ({
+            name: String(item?.name || finalOffers[index]?.name || `Product ${index + 1}`).trim().slice(0, 120),
+            description: String(item?.description || finalOffers[index]?.body || 'A product created by Buildora AI.').trim().slice(0, 1200),
+            price: Math.max(10000, Math.round(Number(item?.priceNgn || (12000 + index * 5000)) * 100)),
+            stock: Math.max(1, Math.min(999, Math.round(Number(item?.stock || (10 + index * 3))))),
+          }))
+          .filter((item: { name: string }) => item.name)
+          .slice(0, 6)
+      : [];
+
+    if (offerType === 'products' && starterProducts.length === 0) {
+      finalOffers.slice(0, 3).forEach((item, index) => {
+        starterProducts.push({
+          name: item.name,
+          description: item.body,
+          price: (12000 + index * 5000) * 100,
+          stock: 10 + index * 4,
+        });
+      });
+    }
+
     const site = await prisma.site.update({
       where: { id: params.siteId },
       data: {
@@ -152,6 +176,7 @@ export async function POST(request: Request, { params }: { params: { siteId: str
           seoDescription: String(generated.seoDescription || '').slice(0, 160),
           generatedFrom: description,
           offerType,
+          commerceEnabled: offerType === 'products',
           blogIdeas,
         },
       },
@@ -164,10 +189,7 @@ export async function POST(request: Request, { params }: { params: { siteId: str
 
     await prisma.$transaction(async (tx) => {
       await tx.page.updateMany({ where: { siteId: params.siteId, isHomepage: true }, data: { isHomepage: false } });
-      await tx.page.updateMany({
-        where: { siteId: params.siteId, slug: oppositeOfferSlug },
-        data: { status: 'DRAFT', publishedAt: null },
-      });
+      await tx.page.updateMany({ where: { siteId: params.siteId, slug: oppositeOfferSlug }, data: { status: 'DRAFT', publishedAt: null } });
 
       const pages = [
         {
@@ -177,6 +199,7 @@ export async function POST(request: Request, { params }: { params: { siteId: str
           contentJson: tiptap(generated.home?.headline || generated.siteName || 'Welcome', [
             ...homeBody,
             generated.home?.cta ? `Next step: ${generated.home.cta}` : '',
+            offerType === 'products' ? 'Shop the collection from our online store.' : '',
           ].filter(Boolean)),
         },
         { slug: 'about', title: generated.about?.title || 'About', isHomepage: false, contentJson: tiptap(generated.about?.title || 'About', aboutBody) },
@@ -196,25 +219,48 @@ export async function POST(request: Request, { params }: { params: { siteId: str
         const excerpt = `A practical guide from ${String(generated.siteName || 'our team')} about ${idea.toLowerCase()}.`;
         await tx.post.upsert({
           where: { siteId_slug: { siteId: params.siteId, slug } },
-          update: {
-            title: idea,
-            excerpt,
-            contentJson: tiptap(idea, [excerpt, 'Use the AI writing assistant to expand this starter article into a complete post.']),
-            status: 'PUBLISHED',
-            publishedAt: new Date(),
-          },
-          create: {
-            siteId: params.siteId,
-            title: idea,
-            slug,
-            excerpt,
-            contentJson: tiptap(idea, [excerpt, 'Use the AI writing assistant to expand this starter article into a complete post.']),
-            status: 'PUBLISHED',
-            publishedAt: new Date(),
-          },
+          update: { title: idea, excerpt, contentJson: tiptap(idea, [excerpt, 'Use the AI writing assistant to expand this starter article into a complete post.']), status: 'PUBLISHED', publishedAt: new Date() },
+          create: { siteId: params.siteId, title: idea, slug, excerpt, contentJson: tiptap(idea, [excerpt, 'Use the AI writing assistant to expand this starter article into a complete post.']), status: 'PUBLISHED', publishedAt: new Date() },
         });
       }
     });
+
+    if (offerType === 'products') {
+      await ensureCommerceSchema();
+      for (const product of starterProducts) {
+        const productSlug = slugify(product.name);
+        const existing = await prisma.$queryRawUnsafe<Array<{ id: string }>>(
+          'SELECT id FROM commerce_products WHERE siteId = ? AND slug = ? LIMIT 1',
+          params.siteId,
+          productSlug,
+        );
+        if (existing[0]) {
+          await prisma.$executeRawUnsafe(
+            'UPDATE commerce_products SET name = ?, description = ?, price = ?, stockQuantity = ?, status = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?',
+            product.name,
+            product.description,
+            product.price,
+            product.stock,
+            'PUBLISHED',
+            existing[0].id,
+          );
+        } else {
+          await prisma.$executeRawUnsafe(
+            'INSERT INTO commerce_products (id, siteId, name, slug, description, price, currency, imageUrl, stockQuantity, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            crypto.randomUUID(),
+            params.siteId,
+            product.name,
+            productSlug,
+            product.description,
+            product.price,
+            'NGN',
+            null,
+            product.stock,
+            'PUBLISHED',
+          );
+        }
+      }
+    }
 
     const promptTokens = json.usage?.prompt_tokens ?? 0;
     const completionTokens = json.usage?.completion_tokens ?? 0;
@@ -231,7 +277,7 @@ export async function POST(request: Request, { params }: { params: { siteId: str
         totalTokens,
         durationMs: Date.now() - started,
         success: true,
-        metadata: { kind: 'SITE_GENERATOR', descriptionLength: description.length, generatedPosts: blogIdeas.length, offerType },
+        metadata: { kind: 'SITE_GENERATOR', descriptionLength: description.length, generatedPosts: blogIdeas.length, offerType, generatedProducts: starterProducts.length },
       },
     });
 
@@ -244,6 +290,8 @@ export async function POST(request: Request, { params }: { params: { siteId: str
         accentColor,
         offerType,
         offerPage: offerSlug,
+        shopUrl: offerType === 'products' ? `/site/${site.slug}/shop` : null,
+        products: starterProducts,
         blogIdeas,
       },
     });
