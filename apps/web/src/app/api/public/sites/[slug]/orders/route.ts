@@ -3,7 +3,6 @@ import { ensureCommerceSchema, type CommerceProductRow } from '../../../../../..
 import { ensureHackathonSchema, jsonError } from '../../../../../../server/hackathon';
 
 type CheckoutItem = { productId?: string; quantity?: number };
-
 type IntegrationConfig = Record<string, { enabled?: boolean; value?: string }>;
 
 export async function POST(request: Request, { params }: { params: { slug: string } }) {
@@ -104,6 +103,8 @@ export async function POST(request: Request, { params }: { params: { slug: strin
     return Response.json({
       order: { id, reference: paymentReference, total: subtotal, currency: 'NGN', status: 'PENDING', paymentStatus: 'UNPAID' },
       paymentUrl,
+      paymentReference,
+      paystackUrl: paymentUrl,
     }, { status: 201 });
   } catch (error) {
     if (error instanceof Error && error.message === 'PRODUCT_UNAVAILABLE') return jsonError('A product in your cart is no longer available', 409);
