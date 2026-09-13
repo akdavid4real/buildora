@@ -56,8 +56,30 @@ export async function GET(
       return NextResponse.json({ message: 'Site not found' }, { status: 404 });
     }
 
+    const config = site.themeConfig && typeof site.themeConfig === 'object'
+      ? (site.themeConfig as Record<string, unknown>)
+      : {};
+    let pages = site.pages;
+
+    if (config.offerType === 'products' && !pages.some((page) => page.slug === 'shop')) {
+      const shopPage = {
+        id: `shop-${site.id}`,
+        title: 'Shop',
+        slug: 'shop',
+        isHomepage: false,
+        contentJson: { type: 'doc', content: [] },
+        seoTitle: `Shop | ${site.name}`,
+        seoDescription: `Shop products from ${site.name}.`,
+        updatedAt: new Date(),
+      };
+      const homepage = pages.find((page) => page.isHomepage);
+      const rest = pages.filter((page) => !page.isHomepage);
+      pages = homepage ? [homepage, shopPage, ...rest] : [shopPage, ...rest];
+    }
+
     return NextResponse.json({
       ...site,
+      pages,
       posts: site.posts.map(({ coverImage, ...post }) => ({
         ...post,
         coverImageUrl: coverImage?.publicUrl ?? null,
