@@ -4,6 +4,7 @@ import {
   AlertCircle,
   BookOpen,
   Check,
+  ClipboardList,
   Eye,
   FileText,
   FormInput,
@@ -17,6 +18,7 @@ import {
   RefreshCw,
   RotateCcw,
   Settings,
+  ShoppingBag,
   Sparkles,
   X,
 } from 'lucide-react';
@@ -30,6 +32,8 @@ const NAV_ITEMS = [
   { href: '/dashboard/sites', label: 'Websites', icon: Globe2 },
   { href: '/dashboard/pages', label: 'Pages', icon: FileText },
   { href: '/dashboard/posts', label: 'Blog posts', icon: BookOpen },
+  { href: '/dashboard/products', label: 'Products', icon: ShoppingBag },
+  { href: '/dashboard/orders', label: 'Orders', icon: ClipboardList },
   { href: '/dashboard/media', label: 'Media', icon: ImageIcon },
   { href: '/dashboard/forms', label: 'Forms', icon: FormInput },
   { href: '/dashboard/integrations', label: 'Integrations', icon: Plug },
@@ -80,6 +84,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     if (pathname.startsWith('/dashboard/sites')) return 'Websites';
     if (pathname.startsWith('/dashboard/pages')) return 'Pages';
     if (pathname.startsWith('/dashboard/posts')) return 'Blog posts';
+    if (pathname.startsWith('/dashboard/products')) return 'Products';
+    if (pathname.startsWith('/dashboard/orders')) return 'Orders';
     if (pathname.startsWith('/dashboard/media')) return 'Media';
     if (pathname.startsWith('/dashboard/forms')) return 'Forms';
     if (pathname.startsWith('/dashboard/integrations')) return 'Integrations';
