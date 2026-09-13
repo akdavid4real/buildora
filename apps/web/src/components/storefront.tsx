@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import type { FormEvent } from 'react';
 
 type Product = {
   id: string;
@@ -63,7 +64,7 @@ export function Storefront({ slug, productSlug }: { slug: string; productSlug?: 
   };
   const remove = (productId: string) => setCart((items) => items.filter((item) => item.productId !== productId));
 
-  const checkout = async (event: React.FormEvent<HTMLFormElement>) => {
+  const checkout = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = event.currentTarget;
     const values = Object.fromEntries(new FormData(form).entries());
